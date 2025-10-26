@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pairwise Rater + Tournament (Strikes + Arrow Keys)</title>
+<style>
+  :root { --bg:#0b0f14; --card:#121821; --text:#e8eef6; --muted:#93a1b1; --accent:#6aa0ff; --soft:#1b2430; }
+  * { box-sizing: border-box; }
+  html,body { height:100%; }
+  body { margin:0; background:linear-gradient(180deg,#0b0f14,#0d131b 60%,#0b0f14);
+    color:var(--text); font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+    display:flex; align-items:center; justify-content:center; padding:24px; }
+  .app { width:min(1200px,100%); }
+  .bar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .card { background:var(--card); border:1px solid #202b3b; border-radius:16px; padding:16px; box-shadow:0 6px 30px rgba(0,0,0,.25); }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .slot { background:var(--soft); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; min-height:340px; border:1px solid #243142; }
+  .media { flex:1; display:flex; align-items:center; justify-content:center; background:#0d131b; }
+  .media img { max-width:100%; max-height:65vh; display:block; }
+  .meta { display:flex; align-items:center; justify-content:space-between; padding:10px 12px; gap:10px; }
+  .fn { font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60%; }
+  .btn { border:1px solid #2a3850; background:#152033; color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600; transition:.15s transform,.15s background,.15s border-color; }
+  .btn:hover { transform:translateY(-1px); background:#19263c; border-color:#364b6e; }
+  .btn.primary { background:linear-gradient(180deg,#1b61ff,#1145c9); border-color:#1d4ed8; }
+  .btn.ghost { background:transparent; }
+  .kbd { font:600 12px ui-monospace,Menlo,Consolas,monospace; background:#0e1622; border:1px solid #283447; padding:3px 6px; border-radius:6px; color:#b9c6d4; }
+  .pill { font-size:12px; padding:6px 10px; border-radius:999px; background:#0e1622; border:1px solid #273246; color:#b9c6d4; }
+  .progress { height:10px; background:#0e1622; border:1px solid #263246; border-radius:999px; overflow:hidden; }
+  .progress > div { height:100%; width:0%; background:linear-gradient(90deg,#6aa0ff,#8cb6ff); transition:width .2s ease; }
+  .hint { color:var(--muted); font-size:13px; }
+  input[type="number"], select { background:#0e1622; border:1px solid #2a3850; color:var(--text); padding:8px 10px; border-radius:10px; width:92px; }
+  input[type="checkbox"] { transform: scale(1.1); }
+  input[type="file"] { display:none; }
+  label.file { border:2px dashed #2a3850; background:#0e1622; color:#b9c6d4; padding:12px 14px; border-radius:10px; cursor:pointer; font-weight:700; }
+  .small { font-size:12px; color:#a8b5c3; }
+  .danger { color:#ff9a9a; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="bar">
+    <div class="card row">
+      <label class="file" title="Pick a whole folder (recursively)">
+        <input id="folderInput" type="file" webkitdirectory directory multiple />
+        Select Folder
+      </label>
+      <label class="file" title="Pick specific image files">
+        <input id="fileInput" type="file" accept="image/*" multiple />
+        Select Files
+      </label>
+      <button class="btn" id="btnClear">Clear</button>
+      <div class="pill" id="count">0 active / 0 total</div>
+      <div class="pill" id="pairs">0 pairs</div>
+      <div class="pill" id="tstat">Tournament: idle</div>
+    </div>
+    <div class="card row">
+      <div class="row"><span class="hint">K</span><input id="kFactor" type="number" min="1" max="128" step="1" value="24" /></div>
+      <div class="row"><span class="hint">Target comps/img</span><input id="targetComps" type="number" min="1" max="200" step="1" value="20" /></div>
+      <div class="row">
+        <label class="row" style="gap:6px;">
+          <input id="strikeToggle" type="checkbox" />
+          <span class="hint">Enable strike-out</span>
+        </label>
+        <span class="hint">Strikes</span>
+        <input id="strikeCount" type="number" min="1" max="20" step="1" value="3" />
+      </div>
+      <button class="btn" id="btnExportCSV">Export Ratings</button>
+      <button class="btn" id="btnExportLog">Export Pair Log</button>
+      <button class="btn" id="btnExportBracket">Export Bracket CSV</button>
+      <button class="btn" id="btnExportSession">Save Session</button>
+      <button class="btn" id="btnImportSession">Load Session</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="gap:12px;">
+      <div class="row">
+        <button class="btn primary" id="btnStart">Start / Resume</button>
+        <button class="btn" id="btnStop">Stop</button>
+        <button class="btn ghost" id="btnReseed">Reseed RNG</button>
+      </div>
+      <div class="row" style="margin-left:auto;">
+        <div class="hint">Keys: <span class="kbd">←</span>/<span class="kbd">A</span> left • <span class="kbd">→</span>/<span class="kbd">L</span> right • <span class="kbd">R</span> new pair • <span class="kbd">S</span> skip</div>
+      </div>
+    </div>
+    <div class="progress" style="margin-top:10px;"><div id="progInner"></div></div>
+    <div class="small" id="progressText" style="margin-top:6px;">No session yet.</div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="gap:12px;">
+      <div class="row"><span class="hint">Tournament seeds</span>
+        <select id="seedCount">
+          <option>8</option><option selected>16</option><option>32</option><option>64</option><option>128</option>
+        </select>
+      </div>
+      <button class="btn primary" id="btnMakeBracket">Start Tournament</button>
+      <button class="btn" id="btnAbortBracket">Reset Tournament</button>
+      <div class="hint">Seeds = top-rated active images; byes auto-fill.</div>
+      <div class="small" id="bracketStatus" style="margin-left:auto;">No bracket yet.</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="slot" id="leftSlot">
+      <div class="media"><img id="imgLeft" alt="" /></div>
+      <div class="meta">
+        <div class="fn" id="nameLeft">—</div>
+        <div class="row">
+          <button class="btn primary" id="voteLeft">Choose Left <span class="kbd">←</span></button>
+          <button class="btn" id="skipLeft">Skip</button>
+        </div>
+      </div>
+    </div>
+    <div class="slot" id="rightSlot">
+      <div class="media"><img id="imgRight" alt="" /></div>
+      <div class="meta">
+        <div class="fn" id="nameRight">—</div>
+        <div class="row">
+          <button class="btn" id="skipRight">Skip</button>
+          <button class="btn primary" id="voteRight">Choose Right <span class="kbd">→</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card small">
+    <div class="row" style="gap:14px; align-items:flex-start;">
+      <div><strong>Load images:</strong> Select Folder (recursive), Select Files, or drag-and-drop. Everything stays local.</div>
+      <div class="hint danger" style="margin-left:auto;">Strike-out removes losers from future pairings once they hit your threshold; tournament uses only active images.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- State ----------
+  const state = {
+    items: [],     // { id, name, path, url, rating, wins, losses, comps, active, strikes }
+    log: [],
+    running: false,
+    seed: Date.now() >>> 0,
+    bracket: null
+  };
+
+  // ---------- DOM ----------
+  const $ = s => document.querySelector(s);
+  const folderInput = $('#folderInput');
+  const fileInput = $('#fileInput');
+  const btnClear = $('#btnClear');
+  const btnStart = $('#btnStart');
+  const btnStop = $('#btnStop');
+  const btnReseed = $('#btnReseed');
+  const btnMakeBracket = $('#btnMakeBracket');
+  const btnAbortBracket = $('#btnAbortBracket');
+
+  const kFactor = $('#kFactor');
+  const targetComps = $('#targetComps');
+  const strikeToggle = $('#strikeToggle');
+  const strikeCount = $('#strikeCount');
+  const seedCountSel = $('#seedCount');
+
+  const btnExportCSV = $('#btnExportCSV');
+  const btnExportLog = $('#btnExportLog');
+  const btnExportBracket = $('#btnExportBracket');
+  const btnExportSession = $('#btnExportSession');
+  const btnImportSession = $('#btnImportSession');
+
+  const count = $('#count');
+  const pairs = $('#pairs');
+  const tstat = $('#tstat');
+  const bracketStatus = $('#bracketStatus');
+
+  const imgLeft = $('#imgLeft'), imgRight = $('#imgRight');
+  const nameLeft = $('#nameLeft'), nameRight = $('#nameRight');
+  const voteLeft = $('#voteLeft'), voteRight = $('#voteRight');
+  const skipLeft = $('#skipLeft'), skipRight = $('#skipRight');
+
+  const progInner = $('#progInner'), progressText = $('#progressText');
+
+  // ---------- Utils ----------
+  function rng() {
+    let t = state.seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+  function reseed(){ state.seed = (Date.now() ^ Math.floor(Math.random()*1e9)) >>> 0; }
+  function fmt(n){ return Intl.NumberFormat().format(n); }
+  const isImage = f => f.type?.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(f.name||'');
+
+  function download(name, text) {
+    const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); URL.revokeObjectURL(a.href); a.remove();
+  }
+
+  // ---------- Loading ----------
+  function ensureUniqueName(name, existing) {
+    if (!existing.has(name)) return name;
+    const dot = name.lastIndexOf('.');
+    const base = dot>0 ? name.slice(0,dot) : name;
+    const ext = dot>0 ? name.slice(dot) : '';
+    let i=2, candidate;
+    do { candidate = `${base} (${i})${ext}`; i++; } while (existing.has(candidate));
+    return candidate;
+  }
+
+  async function loadFiles(files) {
+    const existing = new Map(state.items.map(x => [x.name, x]));
+    let added = 0;
+    for (const file of files) {
+      if (!isImage(file)) continue;
+      const url = URL.createObjectURL(file);
+      const short = (file.webkitRelativePath || file.name).split('/').pop();
+      const finalName = ensureUniqueName(short, existing);
+      if (existing.has(finalName)) { existing.get(finalName).url = url; continue; }
+      const it = { id: crypto.randomUUID(), name: finalName, path: file.webkitRelativePath || file.name,
+        url, rating:1500, wins:0, losses:0, comps:0, strikes:0, active:true };
+      state.items.push(it); existing.set(finalName, it); added++;
+    }
+    if (!added && files.length) alert('No new image files found.');
+    updateCounts(); queueNextPair(true);
+  }
+
+  folderInput.addEventListener('change', e => {
+    const files = Array.from(e.target.files || []).filter(isImage);
+    if (files.length) loadFiles(files);
+  });
+  fileInput.addEventListener('change', e => {
+    const files = Array.from(e.target.files || []).filter(isImage);
+    if (files.length) loadFiles(files);
+  });
+  window.addEventListener('dragover', e => { e.preventDefault(); });
+  window.addEventListener('drop', e => { e.preventDefault();
+    const fs = Array.from(e.dataTransfer.files||[]).filter(isImage);
+    if (fs.length) loadFiles(fs);
+  });
+
+  btnClear.addEventListener('click', () => {
+    state.items.forEach(it => it.url && URL.revokeObjectURL(it.url));
+    Object.assign(state, { items:[], log:[], running:false, bracket:null });
+    imgLeft.src = imgRight.src = ''; nameLeft.textContent = nameRight.textContent = '—';
+    updateCounts(); updateProgress(); updateBracketStatus();
+  });
+
+  // ---------- Elo ----------
+  function expected(Ra,Rb){ return 1/(1+Math.pow(10,(Rb-Ra)/400)); }
+  function applyElo(a,b,winner,K){
+    const Ea=expected(a.rating,b.rating), Eb=1-Ea;
+    const Sa=winner==='a'?1:winner==='b'?0:0.5, Sb=1-Sa;
+    const aBefore=a.rating, bBefore=b.rating;
+    a.rating=a.rating+K*(Sa-Ea); b.rating=b.rating+K*(Sb-Eb);
+    a.comps++; b.comps++;
+    if(winner==='a'){ a.wins++; b.losses++; b.strikes += strikeToggle.checked ? 1 : 0; }
+    else if(winner==='b'){ b.wins++; a.losses++; a.strikes += strikeToggle.checked ? 1 : 0; }
+    // Strike-out enforcement
+    if (strikeToggle.checked) {
+      const limit = Math.max(1, Number(strikeCount.value||3));
+      if (a.strikes >= limit) a.active = false;
+      if (b.strikes >= limit) b.active = false;
+    }
+    return {aBefore,bBefore,aAfter:a.rating,bAfter:b.rating};
+  }
+
+  // ---------- Pairing ----------
+  let currentPair = null;
+  function activeItems(){ return state.items.filter(x=>x.active); }
+
+  function pickPair(){
+    const items = activeItems();
+    if(items.length < 2) return null;
+    const minComps = Math.min(...items.map(x=>x.comps));
+    const weights = items.map(x=>1/(1+(x.comps-minComps)));
+    function pickOne(exclude=-1){
+      let total=0; for(let i=0;i<weights.length;i++) if(i!==exclude) total+=weights[i];
+      let r=rng()*total;
+      for(let i=0;i<items.length;i++){ if(i===exclude) continue; r-=weights[i]; if(r<=0) return i; }
+      let i; do { i=Math.floor(rng()*items.length); } while(i===exclude); return i;
+    }
+    const i=pickOne(); const j=pickOne(i);
+    return [items[i], items[j]];
+  }
+
+  function queueNextPair(force=false){
+    if(!state.running && !force) return;
+    currentPair = pickPair();
+    renderPair(currentPair);
+    updateProgress();
+  }
+
+  function renderPair(pair){
+    if(!pair){ imgLeft.removeAttribute('src'); imgRight.removeAttribute('src');
+      nameLeft.textContent = nameRight.textContent = '—'; return; }
+    const [L,R]=pair;
+    imgLeft.src=L.url; imgRight.src=R.url; nameLeft.textContent=L.name; nameRight.textContent=R.name;
+  }
+
+  function totalTarget(){ const per=Number(targetComps.value||0); return per>0? per*activeItems().length : 0; }
+  function updateCounts(){
+    const active = activeItems().length, total = state.items.length;
+    count.textContent = `${fmt(active)} active / ${fmt(total)} total`;
+    pairs.textContent = `${fmt(state.log.length)} pairs logged`;
+  }
+  function updateProgress(){
+    const goal=totalTarget(); const have=activeItems().reduce((s,x)=>s+x.comps,0);
+    const pct=goal?Math.min(100,Math.round(have/goal*100)):0;
+    progInner.style.width=pct+'%';
+    progressText.textContent = goal ? `Coverage: ${fmt(have)} / ${fmt(goal)} comps (${pct}%)`
+                                    : `Comparisons so far (active only): ${fmt(have)}`;
+  }
+
+  function record(choice){
+    if(!currentPair) return;
+    const [L,R]=currentPair; const K=Number(kFactor.value||24);
+    const out = choice==='left' ? 'a' : choice==='right' ? 'b' : 'draw';
+    const {aBefore,bBefore,aAfter,bAfter} = applyElo(L,R,out,K);
+    state.log.push({ ts:Date.now(), left:L.name, right:R.name, choice, k:K,
+      leftBefore:aBefore, rightBefore:bBefore, leftAfter:aAfter, rightAfter:bAfter });
+    updateCounts();
+    queueNextPair(true);
+  }
+
+  // ---------- Tournament ----------
+  function nextPow2(n){ return 1<<Math.ceil(Math.log2(n)); }
+  function makeBracket(seedN){
+    const pool = activeItems();
+    if(pool.length<2) return alert('Need at least two active images.');
+    const sorted=[...pool].sort((a,b)=>b.rating-a.rating);
+    const N=Math.min(seedN, sorted.length);
+    const seeds = sorted.slice(0,N).map(it => state.items.indexOf(it));
+    const size = nextPow2(N);
+    const bracketIndices = []; for(let i=0;i<size/2;i++) bracketIndices.push([i+1,size-i]);
+    const rankToIdx = r => r<=N ? seeds[r-1] : null;
+    const round1 = bracketIndices.map(([rA,rB],i)=>({matchId:`R1M${i+1}`,aIdx:rankToIdx(rA),bIdx:rankToIdx(rB),winnerIdx:undefined}));
+    state.bracket = { round:1, rounds:[round1], history:[] };
+    resolveByes(); updateBracketStatus(); showCurrentMatch();
+  }
+  function resolveByes(){
+    const r=state.bracket.rounds[0];
+    for(const m of r){
+      if(m.winnerIdx!==undefined) continue;
+      if(m.aIdx!=null && m.bIdx==null) m.winnerIdx=m.aIdx;
+      else if(m.aIdx==null && m.bIdx!=null) m.winnerIdx=m.bIdx;
+    }
+    advanceRoundsIfReady();
+  }
+  function currentUnplayedMatch(){
+    const b=state.bracket; if(!b) return null;
+    const r = b.rounds[b.round-1];
+    return r.find(m=>m.winnerIdx===undefined && m.aIdx!=null && m.bIdx!=null) || null;
+  }
+  function advanceRoundsIfReady(){
+    const b=state.bracket; if(!b) return;
+    const r = b.rounds[b.round-1];
+    if(r.some(m=>m.winnerIdx===undefined)) return;
+    const winners = r.map(m=>m.winnerIdx ?? null);
+    if(winners.length===1) { updateBracketStatus(); return; }
+    const next=[];
+    for(let i=0;i<winners.length;i+=2)
+      next.push({ matchId:`R${b.round+1}M${(i/2)+1}`, aIdx:winners[i], bIdx:winners[i+1]??null, winnerIdx:undefined });
+    b.rounds.push(next); b.round++;
+    for(const m of next){ if(m.aIdx!=null && m.bIdx==null) m.winnerIdx=m.aIdx; else if(m.aIdx==null && m.bIdx!=null) m.winnerIdx=m.bIdx; }
+    updateBracketStatus();
+  }
+  function showCurrentMatch(){
+    const m=currentUnplayedMatch();
+    if(!m){
+      const champ=getChampion();
+      if(champ!=null){ const it=state.items[champ];
+        imgLeft.src = it?.url || ''; imgRight.src = ''; nameLeft.textContent = it? `🏆 ${it.name}`:'—'; nameRight.textContent='—';
+      }
+      return;
+    }
+    imgLeft.src = state.items[m.aIdx].url; imgRight.src = state.items[m.bIdx].url;
+    nameLeft.textContent = state.items[m.aIdx].name; nameRight.textContent = state.items[m.bIdx].name;
+  }
+  function recordTournament(choice){
+    const m=currentUnplayedMatch(); if(!m) return;
+    const winnerIdx = choice==='left' ? m.aIdx : choice==='right' ? m.bIdx : (rng()<0.5?m.aIdx:m.bIdx);
+    m.winnerIdx = winnerIdx;
+    state.bracket.history.push({ ts:Date.now(), matchId:m.matchId,
+      a:state.items[m.aIdx].name, b:state.items[m.bIdx].name, choice, winner:state.items[winnerIdx].name });
+    advanceRoundsIfReady(); showCurrentMatch(); updateBracketStatus();
+  }
+  function getChampion(){
+    const b=state.bracket; if(!b) return null;
+    const last=b.rounds[b.rounds.length-1];
+    if(last.length===1 && last[0].winnerIdx!=null) return last[0].winnerIdx;
+    return null;
+  }
+  function bracketCSV(){
+    const b=state.bracket; if(!b) return '';
+    const rows=[['round','match','a','b','winner'].join(',')];
+    b.rounds.forEach((round,ri)=>{
+      round.forEach((m,mi)=>{
+        rows.push([ri+1,mi+1,m.aIdx!=null?state.items[m.aIdx].name:'BYE', m.bIdx!=null?state.items[m.bIdx].name:'BYE', m.winnerIdx!=null?state.items[m.winnerIdx].name:''].join(','));
+      });
+    });
+    return rows.join('\n');
+  }
+  function updateBracketStatus(){
+    const b=state.bracket;
+    if(!b){ bracketStatus.textContent='No bracket yet.'; tstat.textContent='Tournament: idle'; return; }
+    const champ=getChampion();
+    if(champ!=null){ bracketStatus.textContent=`Champion: ${state.items[champ].name}`; tstat.textContent='Tournament: finished'; return; }
+    const total = b.rounds.flat().length;
+    const played = b.rounds.flat().filter(m=>m.winnerIdx!=null).length;
+    bracketStatus.textContent = `Round ${b.round} • ${played}/${total} decided`;
+    tstat.textContent = `Tournament: Round ${b.round}`;
+  }
+
+  // ---------- Events ----------
+  btnStart.addEventListener('click', ()=>{ if(activeItems().length<2){ alert('Load at least two images (active).'); return; } state.running=true; queueNextPair(true); });
+  btnStop.addEventListener('click', ()=>{ state.running=false; updateProgress(); });
+  btnReseed.addEventListener('click', ()=>{ reseed(); queueNextPair(true); });
+
+  voteLeft.addEventListener('click', ()=> state.bracket ? recordTournament('left') : record('left'));
+  voteRight.addEventListener('click', ()=> state.bracket ? recordTournament('right') : record('right'));
+  skipLeft.addEventListener('click', ()=> state.bracket ? recordTournament('skip') : record('draw'));
+  skipRight.addEventListener('click', ()=> state.bracket ? recordTournament('skip') : record('draw'));
+
+  window.addEventListener('keydown', (e) => {
+    if(e.repeat) return;
+    const k=e.key.toLowerCase();
+    if(k==='arrowleft' || k==='a') (state.bracket ? recordTournament('left') : record('left'));
+    else if(k==='arrowright' || k==='l') (state.bracket ? recordTournament('right') : record('right'));
+    else if(k==='r') (state.bracket ? showCurrentMatch() : queueNextPair(true));
+    else if(k==='s') (state.bracket ? recordTournament('skip') : record('draw'));
+  });
+
+  btnMakeBracket.addEventListener('click', ()=>{
+    const n = Number(seedCountSel.value||16);
+    makeBracket(n);
+  });
+  btnAbortBracket.addEventListener('click', ()=>{
+    state.bracket=null; updateBracketStatus(); queueNextPair(true);
+  });
+
+  // ---------- Export / Import ----------
+  btnExportCSV.addEventListener('click', ()=>{
+    if(!state.items.length) return;
+    const sorted=[...state.items].sort((a,b)=>b.rating-a.rating);
+    const rows=[['rank','filename','rating','wins','losses','comparisons','strikes','active'].join(','),
+      ...sorted.map((it,i)=>[i+1,it.name,Math.round(it.rating),it.wins,it.losses,it.comps,it.strikes,it.active?1:0].join(','))];
+    download('pairwise_ratings.csv', rows.join('\n'));
+  });
+  btnExportLog.addEventListener('click', ()=>{
+    const rows=[['ts','left','right','choice','k','leftBefore','rightBefore','leftAfter','rightAfter'].join(','),
+      ...state.log.map(r=>[r.ts,r.left,r.right,r.choice,r.k,r.leftBefore,r.rightBefore,r.leftAfter,r.rightAfter].join(','))];
+    download('pairwise_log.csv', rows.join('\n'));
+  });
+  btnExportBracket.addEventListener('click', ()=>{
+    if(!state.bracket){ alert('No bracket yet.'); return; }
+    download('tournament_bracket.csv', bracketCSV());
+  });
+  btnExportSession.addEventListener('click', ()=>{
+    const data={ v:3,
+      items: state.items.map(({id,name,path,rating,wins,losses,comps,strikes,active})=>({id,name,path,rating,wins,losses,comps,strikes,active})),
+      log:state.log, seed:state.seed, bracket:state.bracket,
+      settings: { K:Number(kFactor.value||24), target:Number(targetComps.value||0), strike: strikeToggle.checked, strikeCount:Number(strikeCount.value||3) }
+    };
+    download('pairwise_session.json', JSON.stringify(data,null,2));
+  });
+  btnImportSession.addEventListener('click', ()=>{
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json';
+    inp.onchange = async () => {
+      const f=inp.files[0]; if(!f) return; const text=await f.text();
+      try {
+        const data=JSON.parse(text);
+        const urlByName=new Map(state.items.map(x=>[x.name,x.url]));
+        state.items = (data.items||[]).map(x=>({
+          id:x.id||crypto.randomUUID(), name:x.name, path:x.path||x.name,
+          url:urlByName.get(x.name)||'', rating:x.rating??1500, wins:x.wins??0, losses:x.losses??0,
+          comps:x.comps??0, strikes:x.strikes??0, active: x.active!==false
+        }));
+        state.log = data.log||[]; state.seed = data.seed||Date.now(); state.bracket = data.bracket||null;
+        // restore settings if present
+        if(data.settings){ kFactor.value=data.settings.K??24; targetComps.value=data.settings.target??20;
+          strikeToggle.checked=!!data.settings.strike; strikeCount.value=data.settings.strikeCount??3; }
+        updateCounts(); updateProgress(); updateBracketStatus(); queueNextPair(true);
+        alert('Session loaded. If some images are blank, reselect the folder so the browser can access those files again.');
+      } catch(err){ alert('Could not load session: '+err.message); }
+    };
+    inp.click();
+  });
+
+})();
+</script>
+</body>
+</html>
