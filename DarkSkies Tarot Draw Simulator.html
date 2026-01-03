@@ -1,0 +1,1260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DarkSkies Tarot Draw Simulator</title>
+  <style>
+    :root{
+      --bg0:#05070e;
+      --bg1:#070b18;
+      --ink:#d7e6ff;
+      --muted:#9ab3d6;
+      --blue0:#0b2a5a;
+      --blue1:#0e5bd6;
+      --blue2:#59a8ff;
+      --card0:#070a12;
+      --card1:#0a1024;
+      --line: rgba(120,180,255,.35);
+      --line2: rgba(120,180,255,.18);
+      --shadow: 0 16px 50px rgba(0,0,0,.55);
+      --shadow2: 0 10px 28px rgba(0,0,0,.45);
+      --radius: 18px;
+      --radius2: 22px;
+      --clip: polygon(10% 0%, 92% 0%, 100% 10%, 100% 90%, 90% 100%, 8% 100%, 0% 90%, 0% 10%);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 20% -10%, rgba(89,168,255,.25), transparent 55%),
+        radial-gradient(900px 600px at 90% 10%, rgba(14,91,214,.18), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(900px 420px at 20% 0%, rgba(255,255,255,.06), transparent 60%),
+        radial-gradient(900px 420px at 80% 10%, rgba(255,255,255,.04), transparent 60%),
+        repeating-linear-gradient(115deg, rgba(140,200,255,.10) 0 1px, transparent 1px 10px),
+        radial-gradient(2px 2px at 30% 40%, rgba(255,255,255,.12), transparent 60%),
+        radial-gradient(2px 2px at 70% 60%, rgba(255,255,255,.10), transparent 60%);
+      mix-blend-mode: screen;
+      opacity:.35;
+      filter: blur(.2px);
+    }
+    body::after{
+      content:"";
+      position:fixed; inset:-40px;
+      pointer-events:none;
+      background:
+        radial-gradient(800px 520px at 50% 0%, rgba(0,0,0,.35), transparent 60%),
+        radial-gradient(1200px 600px at 50% 100%, rgba(0,0,0,.45), transparent 70%);
+      opacity:.65;
+    }
+
+    header{
+      position:sticky; top:0; z-index:5;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(180deg, rgba(5,7,14,.85), rgba(5,7,14,.35));
+      border-bottom: 1px solid rgba(120,180,255,.18);
+    }
+
+    .wrap{ max-width: 1200px; margin:0 auto; padding: 18px 18px 26px; position:relative; z-index:1; }
+
+    .titleRow{
+      display:flex; gap:16px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap;
+      padding: 10px 0 8px;
+    }
+    .brand{ display:flex; flex-direction:column; gap:4px; }
+    .brand h1{
+      margin:0;
+      font-size: 22px;
+      letter-spacing:.6px;
+      text-transform: uppercase;
+    }
+    .brand .sub{
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing:.2px;
+    }
+
+    .hud{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .pill{
+      border:1px solid rgba(120,180,255,.22);
+      background: rgba(10,16,36,.55);
+      padding: 8px 10px;
+      border-radius: 999px;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      display:flex; gap:10px; align-items:center;
+    }
+    .dot{
+      width:8px; height:8px; border-radius:50%;
+      background: var(--blue2);
+      box-shadow: 0 0 14px rgba(89,168,255,.55);
+    }
+
+    main{ position:relative; z-index:1; }
+
+    .panel{
+      border: 1px solid rgba(120,180,255,.18);
+      background: linear-gradient(180deg, rgba(10,16,36,.65), rgba(7,10,18,.55));
+      border-radius: var(--radius2);
+      padding: 14px;
+      box-shadow: var(--shadow2);
+      overflow:hidden;
+      position:relative;
+    }
+    .panel::before{
+      content:"";
+      position:absolute; inset:-1px;
+      background:
+        radial-gradient(600px 220px at 20% 0%, rgba(89,168,255,.22), transparent 60%),
+        radial-gradient(600px 220px at 90% 20%, rgba(14,91,214,.18), transparent 60%);
+      opacity:.65;
+      pointer-events:none;
+    }
+
+    .controls{
+      display:grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 14px;
+      align-items:start;
+      position:relative;
+      z-index:1;
+    }
+    @media (max-width: 860px){
+      .controls{ grid-template-columns: 1fr; }
+    }
+
+    .ctrlGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 560px){
+      .ctrlGrid{ grid-template-columns: 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing:.3px;
+      margin: 0 0 6px;
+      text-transform: uppercase;
+    }
+
+    select,input[type="number"],button,textarea{
+      font-family: var(--sans);
+    }
+
+    select,input[type="number"]{
+      width:100%;
+      background: rgba(5,7,14,.55);
+      border: 1px solid rgba(120,180,255,.20);
+      color: var(--ink);
+      border-radius: 14px;
+      padding: 10px 12px;
+      outline:none;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.2);
+    }
+    select:focus,input[type="number"]:focus,textarea:focus{
+      border-color: rgba(89,168,255,.55);
+      box-shadow: 0 0 0 3px rgba(89,168,255,.15);
+    }
+
+    .btnRow{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      margin-top: 10px;
+    }
+    button{
+      border: 1px solid rgba(120,180,255,.22);
+      background: linear-gradient(180deg, rgba(11,42,90,.8), rgba(7,10,18,.75));
+      color: var(--ink);
+      padding: 10px 14px;
+      border-radius: 16px;
+      cursor:pointer;
+      box-shadow: 0 12px 24px rgba(0,0,0,.35);
+      transition: transform .08s ease, filter .12s ease, border-color .12s ease;
+      position:relative;
+      overflow:hidden;
+    }
+    button::before{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        radial-gradient(240px 80px at 20% 0%, rgba(89,168,255,.25), transparent 60%),
+        radial-gradient(240px 80px at 80% 30%, rgba(14,91,214,.20), transparent 60%),
+        linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+      opacity:.9;
+      pointer-events:none;
+    }
+    button:hover{ filter: brightness(1.05); border-color: rgba(89,168,255,.45); }
+    button:active{ transform: translateY(1px) scale(.99); }
+    .btnAlt{ background: linear-gradient(180deg, rgba(10,16,36,.75), rgba(7,10,18,.75)); }
+    .btnDanger{
+      background: linear-gradient(180deg, rgba(50,10,18,.75), rgba(7,10,18,.75));
+      border-color: rgba(255,120,160,.20);
+    }
+
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(120,180,255,.18);
+      background: rgba(5,7,14,.40);
+      user-select:none;
+      cursor:pointer;
+    }
+    .toggle input{ display:none; }
+    .switch{
+      width: 46px; height: 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(120,180,255,.22);
+      background: rgba(7,10,18,.7);
+      position:relative;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+      flex: 0 0 auto;
+    }
+    .knob{
+      position:absolute; top:3px; left:3px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.9), rgba(89,168,255,.65) 55%, rgba(14,91,214,.35));
+      box-shadow: 0 0 18px rgba(89,168,255,.40);
+      transition: transform .14s ease;
+    }
+    .toggle.on .knob{ transform: translateX(20px); }
+    .toggle.on .switch{
+      border-color: rgba(89,168,255,.55);
+      box-shadow: 0 0 0 3px rgba(89,168,255,.12), inset 0 0 0 1px rgba(0,0,0,.25);
+    }
+    .toggle .tTxt{ display:flex; flex-direction:column; gap:2px; }
+    .toggle .tTitle{ font-size: 13px; letter-spacing:.2px; }
+    .toggle .tHint{
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    .note{
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+      line-height:1.35;
+    }
+
+    .cardsPanel{ margin-top: 14px; padding: 14px; }
+
+    .cardsGrid{
+      display:grid;
+      grid-template-columns: repeat(5, minmax(140px, 1fr));
+      gap: 12px;
+      position:relative;
+      z-index:1;
+    }
+    @media (max-width: 1100px){ .cardsGrid{ grid-template-columns: repeat(4, minmax(140px, 1fr)); } }
+    @media (max-width: 900px){ .cardsGrid{ grid-template-columns: repeat(3, minmax(140px, 1fr)); } }
+    @media (max-width: 640px){ .cardsGrid{ grid-template-columns: repeat(2, minmax(140px, 1fr)); } }
+
+    .card{
+      border-radius: var(--radius2);
+      position:relative;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(120,180,255,.20);
+      background: linear-gradient(180deg, rgba(7,10,18,.85), rgba(10,16,36,.65));
+      overflow:hidden;
+      transform: translateZ(0);
+    }
+
+    .cardFace{
+      aspect-ratio: 3 / 5;
+      clip-path: var(--clip);
+      position:relative;
+      padding: 12px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap: 10px;
+      background:
+        radial-gradient(500px 220px at 50% 0%, rgba(89,168,255,.18), transparent 60%),
+        radial-gradient(500px 280px at 20% 90%, rgba(14,91,214,.12), transparent 70%),
+        linear-gradient(180deg, rgba(7,10,18,.92), rgba(10,16,36,.80));
+      border: 1px solid rgba(120,180,255,.15);
+      border-radius: 20px;
+      margin: 10px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+      transition: transform .18s ease, filter .18s ease;
+    }
+
+    .card:hover .cardFace{ filter: brightness(1.06); transform: translateY(-2px); }
+
+    .cardFace::before{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        radial-gradient(180px 120px at 20% 28%, rgba(255,255,255,.06), transparent 60%),
+        radial-gradient(220px 150px at 70% 18%, rgba(255,255,255,.05), transparent 62%),
+        radial-gradient(200px 150px at 45% 75%, rgba(255,255,255,.04), transparent 65%),
+        repeating-linear-gradient(115deg, rgba(140,200,255,.10) 0 1px, transparent 1px 9px);
+      opacity:.65;
+      mix-blend-mode: screen;
+      pointer-events:none;
+    }
+    .cardFace::after{
+      content:"";
+      position:absolute; inset:-60px;
+      background:
+        radial-gradient(800px 280px at 50% 30%, rgba(0,0,0,.35), transparent 60%),
+        radial-gradient(360px 220px at 80% 85%, rgba(0,0,0,.25), transparent 62%);
+      opacity:.85;
+      pointer-events:none;
+    }
+
+    .cardTop{ position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+    .badge{
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing:.3px;
+      color: rgba(215,230,255,.9);
+      border: 1px solid rgba(120,180,255,.20);
+      background: rgba(5,7,14,.45);
+      padding: 6px 8px;
+      border-radius: 999px;
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    .badge .miniDot{
+      width:6px; height:6px; border-radius:50%;
+      background: rgba(89,168,255,.9);
+      box-shadow: 0 0 12px rgba(89,168,255,.45);
+    }
+    .numSigil{
+      font-family: var(--mono);
+      font-size: 14px;
+      letter-spacing:.5px;
+      padding: 6px 10px;
+      border-radius: 14px;
+      background: rgba(11,42,90,.55);
+      border: 1px solid rgba(120,180,255,.25);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.22);
+      white-space:nowrap;
+    }
+
+    .cardMid{
+      position:relative; z-index:1;
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      text-align:center;
+      padding: 6px 0;
+    }
+    .glyph{
+      font-size: 36px;
+      line-height:1;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
+      opacity:.96;
+    }
+    .name{
+      font-weight: 750;
+      letter-spacing:.5px;
+      text-transform: uppercase;
+      font-size: 13px;
+      line-height: 1.2;
+      text-shadow: 0 12px 24px rgba(0,0,0,.55);
+    }
+    .subtitle{ font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing:.2px; }
+
+    .cardBottom{
+      position:relative; z-index:1;
+      display:flex; justify-content:space-between; align-items:center; gap:8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: rgba(215,230,255,.82);
+    }
+    .tag{
+      padding: 6px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(120,180,255,.18);
+      background: rgba(5,7,14,.45);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width: 70%;
+    }
+    .revRibbon{
+      position:absolute;
+      top: 8px; right: -34px;
+      transform: rotate(35deg);
+      background: rgba(89,168,255,.16);
+      border: 1px solid rgba(89,168,255,.30);
+      color: rgba(215,230,255,.95);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 6px 38px;
+      letter-spacing:.35px;
+      text-transform: uppercase;
+      box-shadow: 0 12px 26px rgba(0,0,0,.35);
+      z-index: 3;
+    }
+
+    .isReversed .cardFace{ transform: rotate(180deg); }
+    .isReversed:hover .cardFace{ transform: rotate(180deg) translateY(-2px); }
+
+    .info{
+      border-top: 1px solid rgba(120,180,255,.16);
+      padding: 12px 12px 12px;
+      display:none;
+      background: rgba(5,7,14,.35);
+    }
+    .card.learning .info{ display:block; }
+    .info .row{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .k{
+      font-family: var(--mono);
+      border: 1px solid rgba(120,180,255,.16);
+      background: rgba(10,16,36,.55);
+      padding: 6px 8px;
+      border-radius: 12px;
+    }
+    .meaning{
+      font-size: 12.5px;
+      line-height: 1.35;
+      color: rgba(215,230,255,.90);
+    }
+    .meaning b{ color: rgba(215,230,255,.98); }
+
+    .empty{
+      padding: 22px 14px;
+      color: var(--muted);
+      text-align:center;
+      font-family: var(--mono);
+      border: 1px dashed rgba(120,180,255,.22);
+      border-radius: var(--radius2);
+      background: rgba(5,7,14,.25);
+    }
+
+    .logPanel{ margin-top: 14px; padding: 14px; }
+    textarea{
+      width:100%;
+      min-height: 160px;
+      background: rgba(5,7,14,.55);
+      border: 1px solid rgba(120,180,255,.20);
+      color: rgba(215,230,255,.92);
+      border-radius: 16px;
+      padding: 12px 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.4;
+      resize: vertical;
+      outline:none;
+    }
+
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: rgba(7,10,18,.92);
+      border: 1px solid rgba(120,180,255,.25);
+      border-radius: 999px;
+      padding: 10px 14px;
+      color: rgba(215,230,255,.95);
+      font-family: var(--mono);
+      font-size: 12px;
+      box-shadow: 0 16px 40px rgba(0,0,0,.55);
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease, transform .18s ease;
+      z-index:999;
+    }
+    .toast.show{
+      opacity:1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+    .small{
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      line-height:1.35;
+    }
+
+    .divider{
+      height:1px;
+      background: rgba(120,180,255,.16);
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="titleRow">
+      <div class="brand">
+        <h1>DarkSkies Tarot Draw Simulator</h1>
+        <div class="sub">Because I just discovered tarot is kind of awesome, and it is now a character trait. ⚡️</div>
+      </div>
+      <div class="hud">
+        <div class="pill" title="Current deck state">
+          <span class="dot"></span>
+          <span id="hudRemaining">Remaining: 0</span>
+          <span>•</span>
+          <span id="hudBreakdown">Major 0 / Minor 0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="panel">
+    <div class="controls">
+      <div>
+        <div class="ctrlGrid">
+          <div>
+            <label for="arcanaSel">Arcana pool</label>
+            <select id="arcanaSel">
+              <option value="mixed">Mixed (Major + Minor)</option>
+              <option value="major">Major Arcana only</option>
+              <option value="minor">Minor Arcana only</option>
+            </select>
+          </div>
+          <div>
+            <label for="modeSel">Draw mode</label>
+            <select id="modeSel">
+              <option value="single">Single card</option>
+              <option value="multi">Multiple cards</option>
+            </select>
+          </div>
+          <div id="countWrap" style="display:none;">
+            <label for="countSel">How many cards?</label>
+            <input id="countSel" type="number" min="1" max="80" value="3" />
+          </div>
+          <div>
+            <label>Learning mode</label>
+            <div id="learnToggle" class="toggle" role="button" tabindex="0" aria-pressed="false">
+              <div class="switch"><div class="knob"></div></div>
+              <div class="tTxt">
+                <div class="tTitle">Show meanings + correspondences</div>
+                <div class="tHint">elements • astrology • “phase” • upright/reversed</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btnRow">
+          <button id="drawBtn">Draw</button>
+          <button id="reshuffleBtn" class="btnAlt" title="Reshuffle deck and return all cards to the pool">Reshuffle</button>
+          <button id="clearBtn" class="btnDanger" title="Clear the table of drawn cards (does not reshuffle)">Clear table</button>
+          <button id="copyBtn" class="btnAlt" title="Copy the draw log">Copy log</button>
+        </div>
+
+        <div class="note">
+          Cards are removed from the pool as you draw, until you reshuffle. Reversals are randomized per draw.
+          Randomness uses <span style="font-family:var(--mono)">crypto.getRandomValues</span>.
+        </div>
+      </div>
+
+      <div>
+        <label>Current pile status</label>
+        <div class="panel" style="padding:12px; background: rgba(5,7,14,.35);">
+          <div style="position:relative; z-index:1;">
+            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-family:var(--mono); font-size:13px;" id="statusLine">Ready.</div>
+                <div class="small" id="statusHint">Reshuffle to start fresh. Draw to begin pulling cards.</div>
+              </div>
+              <div class="pill" style="margin-left:auto;">
+                <span class="miniDot" style="width:6px;height:6px;border-radius:50%;background:rgba(89,168,255,.9);box-shadow:0 0 12px rgba(89,168,255,.45)"></span>
+                <span id="seedLine">RNG: Web Crypto</span>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="small">
+              <b>Bonus cards included:</b> <span style="font-family:var(--mono)">22 The Well</span> and <span style="font-family:var(--mono)">23 The Artist</span> (Ethereal Visions extra majors).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel cardsPanel" aria-label="Drawn cards">
+    <div id="cardsGrid" class="cardsGrid"></div>
+    <div id="emptyState" class="empty" style="display:none;">
+      No cards drawn yet. Hit <b>Draw</b> to pull from the storm. ☁️⚡️
+    </div>
+  </section>
+
+  <section class="panel logPanel" aria-label="Copy-paste draw log">
+    <label for="logOut">Copy-paste log (order + upright/reversed)</label>
+    <textarea id="logOut" readonly spellcheck="false"></textarea>
+    <div class="small">
+      Format: <span style="font-family:var(--mono)">1) Card Name — Upright/Reversed</span>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</main>
+
+<script>
+/* =========
+   RNG — Web Crypto (unbiased ints + Fisher–Yates)
+   ========= */
+const HAS_CRYPTO = !!(window.crypto && crypto.getRandomValues);
+
+function cryptoRandomUint32(){
+  const a = new Uint32Array(1);
+  crypto.getRandomValues(a);
+  return a[0];
+}
+
+function cryptoRandomInt(maxExclusive){
+  if (maxExclusive <= 0 || !Number.isFinite(maxExclusive)) throw new Error("maxExclusive must be > 0");
+  const max = Math.floor(maxExclusive);
+
+  // Unbiased via rejection sampling
+  const limit = Math.floor(0x100000000 / max) * max;
+  let x;
+  do { x = cryptoRandomUint32(); } while (x >= limit);
+  return x % max;
+}
+
+function shuffleInPlace(arr){
+  for (let i = arr.length - 1; i > 0; i--){
+    const j = HAS_CRYPTO ? cryptoRandomInt(i + 1) : Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function randomBool(){
+  return HAS_CRYPTO ? ((cryptoRandomUint32() & 1) === 1) : (Math.random() < 0.5);
+}
+
+/* =========
+   Tarot Data
+   ========= */
+const SUITS = [
+  { key:"Wands",     element:"Fire",  glyph:"🜂", suitTag:"Wands",  theme:"drive, passion, ambition, spark", shadow:"impulsiveness, burnout, ego" },
+  { key:"Cups",      element:"Water", glyph:"🜄", suitTag:"Cups",   theme:"emotion, bonds, intuition, heart", shadow:"avoidance, over-attachment, moodiness" },
+  { key:"Swords",    element:"Air",   glyph:"🜁", suitTag:"Swords", theme:"mind, truth, choices, conflict",   shadow:"overthinking, cruelty, anxiety" },
+  { key:"Pentacles", element:"Earth", glyph:"🜃", suitTag:"Pents",  theme:"body, work, resources, reality",   shadow:"greed, stagnation, insecurity" },
+];
+
+const RANKS = [
+  { key:"Ace",   n:1,  phase:"Seed / Spark",
+    u:"a pure beginning; potential that wants a shape",
+    r:"a false start; potential blocked or leaking away" },
+  { key:"Two",   n:2,  phase:"Duality / Choice",
+    u:"tension that creates options; a decision point",
+    r:"indecision; a split that becomes a stall" },
+  { key:"Three", n:3,  phase:"Growth / Expression",
+    u:"expansion; first results; momentum becomes visible",
+    r:"misalignment; growth without direction" },
+  { key:"Four",  n:4,  phase:"Stability / Structure",
+    u:"foundations; boundaries; a steady platform",
+    r:"rigidity; comfort turning into a cage" },
+  { key:"Five",  n:5,  phase:"Disruption / Friction",
+    u:"challenge; change via stress; the test arrives",
+    r:"conflict avoided; lessons postponed (and louder later)" },
+  { key:"Six",   n:6,  phase:"Harmony / Exchange",
+    u:"balance restored; give-and-take; supportive flow",
+    r:"unequal exchange; harmony that’s performative" },
+  { key:"Seven", n:7,  phase:"Trial / Refinement",
+    u:"a skill check; strategy; pressure reveals truth",
+    r:"shortcuts; scattered effort; confidence without grounding" },
+  { key:"Eight", n:8,  phase:"Momentum / Craft",
+    u:"movement; repetition; skill sharpening into mastery",
+    r:"stagnation; busywork; motion without progress" },
+  { key:"Nine",  n:9,  phase:"Fruition / Near-Completion",
+    u:"almost there; ripening; personal payoff",
+    r:"diminishing returns; fear of finishing; self-sabotage" },
+  { key:"Ten",   n:10, phase:"Completion / Overflow",
+    u:"the cycle peaks; responsibility or abundance arrives",
+    r:"collapse from excess; refusing to end what’s ended" },
+  { key:"Page",  court:true, phase:"Student / Messenger",
+    u:"curiosity; messages; learning by doing",
+    r:"immaturity; scattered attention; ignoring the message" },
+  { key:"Knight",court:true, phase:"Quest / Motion",
+    u:"pursuit; momentum; courage to act",
+    r:"recklessness; charging without aim; burnout" },
+  { key:"Queen", court:true, phase:"Integration / Depth",
+    u:"inner mastery; nurturing power; embodied wisdom",
+    r:"coldness or overwhelm; power turned inward against self" },
+  { key:"King",  court:true, phase:"Command / Stewardship",
+    u:"leadership; responsibility; steady authority",
+    r:"control issues; brittle ego; authority without care" },
+];
+
+/* Majors: meanings + keywords are separate now (this was the bug). */
+const MAJORS = [
+  { num:0,  name:"The Fool", element:"Air", astro:"Uranus", phase:"Leap / Innocence",
+    kwU:"beginnings; openness; trust; adventure; spontaneity",
+    kwR:"recklessness; naivety; poor timing; folly; risk",
+    u:"Beginnings, trust, spontaneity.", r:"Recklessness, naivety, poor timing." },
+
+  { num:1,  name:"The Magician", element:"Air", astro:"Mercury", phase:"Will / Focus",
+    kwU:"skill; focus; manifestation; tools; initiative",
+    kwR:"trickery; scattered energy; manipulation; unused talent",
+    u:"Skill, initiative, manifestation.", r:"Trickery, scattered power, half-truths." },
+
+  { num:2,  name:"The High Priestess", element:"Water", astro:"Moon", phase:"Intuition / Veil",
+    kwU:"intuition; mystery; inner voice; secrets; patience",
+    kwR:"ignored intuition; confusion; hidden motives; repression",
+    u:"Inner knowing, mystery, sacred silence.", r:"Ignored intuition, secrets, confusion." },
+
+  { num:3,  name:"The Empress", element:"Earth", astro:"Venus", phase:"Creation / Abundance",
+    kwU:"nurture; beauty; fertility; comfort; growth",
+    kwR:"creative block; neglect; smothering; depletion",
+    u:"Nurture, beauty, growth.", r:"Smothering, creative blocks, neglect." },
+
+  { num:4,  name:"The Emperor", element:"Fire", astro:"Aries", phase:"Structure / Rule",
+    kwU:"authority; order; protection; discipline; boundaries",
+    kwR:"rigidity; tyranny; instability; control issues",
+    u:"Order, protection, leadership.", r:"Rigid control, dominance, instability." },
+
+  { num:5,  name:"The Hierophant", element:"Earth", astro:"Taurus", phase:"Tradition / Teaching",
+    kwU:"tradition; values; mentorship; community; doctrine",
+    kwR:"nonconformity; hollow rules; bad counsel; rebellion",
+    u:"Values, guidance, institutions.", r:"Rebellion, hollow rituals, bad advice." },
+
+  { num:6,  name:"The Lovers", element:"Air", astro:"Gemini", phase:"Union / Choice",
+    kwU:"union; alignment; choice; devotion; honesty",
+    kwR:"disharmony; temptation; mixed values; imbalance",
+    u:"Bond, alignment, meaningful choice.", r:"Disharmony, temptation, misalignment." },
+
+  { num:7,  name:"The Chariot", element:"Water", astro:"Cancer", phase:"Victory / Drive",
+    kwU:"determination; victory; willpower; direction; control",
+    kwR:"loss of control; aggression; scattered focus; derailment",
+    u:"Momentum, determination, control.", r:"Loss of direction, forcing outcomes." },
+
+  { num:8,  name:"Strength", element:"Fire", astro:"Leo", phase:"Courage / Heart",
+    kwU:"courage; compassion; patience; resilience; inner power",
+    kwR:"self-doubt; reactivity; insecurity; low stamina",
+    u:"Compassionate power, bravery.", r:"Self-doubt, reactivity, weakness of will." },
+
+  { num:9,  name:"The Hermit", element:"Earth", astro:"Virgo", phase:"Insight / Solitude",
+    kwU:"introspection; guidance; solitude; wisdom; searching",
+    kwR:"isolation; withdrawal; loneliness; avoidance",
+    u:"Guidance within, reflection.", r:"Isolation, avoidance, fear of people." },
+
+  { num:10, name:"Wheel of Fortune", element:"Fire", astro:"Jupiter", phase:"Change / Turning",
+    kwU:"cycles; fate; luck; turning point; momentum shift",
+    kwR:"setbacks; resistance; bad timing; stuck cycle",
+    u:"Cycles, luck, pivot points.", r:"Resistance to change, bad timing." },
+
+  { num:11, name:"Justice", element:"Air", astro:"Libra", phase:"Balance / Truth",
+    kwU:"truth; fairness; accountability; clarity; ethics",
+    kwR:"bias; dishonesty; denial; unfairness; imbalance",
+    u:"Fairness, clarity, consequences.", r:"Bias, denial, dodging accountability." },
+
+  { num:12, name:"The Hanged Man", element:"Water", astro:"Neptune", phase:"Surrender / Reframe",
+    kwU:"pause; surrender; new perspective; sacrifice; release",
+    kwR:"stalling; martyrdom; refusal; stuck viewpoint",
+    u:"Pause, perspective shift, sacrifice.", r:"Stalling, martyrdom, refusal to let go." },
+
+  { num:13, name:"Death", element:"Water", astro:"Scorpio", phase:"Release / Transition",
+    kwU:"ending; transformation; rebirth; clearing; transition",
+    kwR:"clinging; fear; stagnation; decay; prolonged ending",
+    u:"Endings, transformation, renewal.", r:"Clinging, fear of change, decay." },
+
+  { num:14, name:"Temperance", element:"Fire", astro:"Sagittarius", phase:"Alchemy / Blend",
+    kwU:"balance; moderation; integration; healing; synergy",
+    kwR:"excess; extremes; imbalance; poor mixing; friction",
+    u:"Moderation, integration, healing.", r:"Excess, imbalance, poor mixing." },
+
+  { num:15, name:"The Devil", element:"Earth", astro:"Capricorn", phase:"Bondage / Desire",
+    kwU:"attachment; temptation; shadow; material trap; dependency",
+    kwR:"release; awareness; breaking chains; reclaiming power",
+    u:"Attachment, temptation, material traps.", r:"Breaking chains, awareness, liberation." },
+
+  { num:16, name:"The Tower", element:"Fire", astro:"Mars", phase:"Revelation / Shock",
+    kwU:"upheaval; revelation; rupture; truth; liberation",
+    kwR:"averted crisis; delayed change; fear of fallout; rebuilding",
+    u:"Sudden truth, collapse of illusion.", r:"Avoided disaster, delayed wake-up call." },
+
+  { num:17, name:"The Star", element:"Air", astro:"Aquarius", phase:"Hope / Guidance",
+    kwU:"hope; renewal; inspiration; calm; faith",
+    kwR:"discouragement; doubt; dimmed hope; low trust",
+    u:"Renewal, inspiration, calm after storm.", r:"Doubt, dimming faith, discouragement." },
+
+  { num:18, name:"The Moon", element:"Water", astro:"Pisces", phase:"Uncertainty / Dream",
+    kwU:"illusion; intuition; dreams; uncertainty; subconscious",
+    kwR:"clarity; fear easing; truth emerging; grounding",
+    u:"Intuition, symbolism, the unknown.", r:"Fear dissolving, clarity returning." },
+
+  { num:19, name:"The Sun", element:"Fire", astro:"Sun", phase:"Clarity / Joy",
+    kwU:"success; joy; vitality; confidence; warmth",
+    kwR:"ego; burnout; blocked joy; pessimism; overexposure",
+    u:"Success, warmth, vitality.", r:"Ego, burnout, joy blocked." },
+
+  { num:20, name:"Judgement", element:"Fire", astro:"Pluto", phase:"Awakening / Call",
+    kwU:"awakening; reckoning; rebirth; calling; forgiveness",
+    kwR:"avoidance; self-doubt; refusal; blame; stuck past",
+    u:"Reckoning, rebirth, answering the call.", r:"Avoidance, self-doubt, refusing growth." },
+
+  { num:21, name:"The World", element:"Earth", astro:"Saturn", phase:"Wholeness / Completion",
+    kwU:"completion; integration; mastery; wholeness; closure",
+    kwR:"unfinished business; delays; loose ends; lack of closure",
+    u:"Completion, integration, mastery.", r:"Loose ends, delays, unfinished business." },
+
+  { num:22, name:"The Well", element:"Water", astro:"Moon / Deep Water", phase:"Depth / Source",
+    kwU:"inner source; creativity; renewal; visions; resourcefulness",
+    kwR:"creative drought; emptiness; fear of depth; depletion",
+    u:"Creativity, resourcefulness, soul-searching, visions.", r:"Emptiness, creative drought, fear of the depths." },
+
+  { num:23, name:"The Artist", element:"Air", astro:"Mercury / Inspiration", phase:"Vision / Design",
+    kwU:"inspiration; design; expression; planning; craft",
+    kwR:"perfectionism; restlessness; blocked art; self-critique",
+    u:"Design, planning, cathartic expression, imagination.", r:"Perfectionism, restlessness, blocked expression." },
+];
+
+function buildDecanMap(){
+  return {
+    "Wands": {
+      2:"Mars in Aries", 3:"Sun in Aries", 4:"Venus in Aries",
+      5:"Saturn in Leo", 6:"Jupiter in Leo", 7:"Mars in Leo",
+      8:"Mercury in Sagittarius", 9:"Moon in Sagittarius", 10:"Saturn in Sagittarius",
+    },
+    "Cups": {
+      2:"Venus in Cancer", 3:"Mercury in Cancer", 4:"Moon in Cancer",
+      5:"Mars in Scorpio", 6:"Sun in Scorpio", 7:"Venus in Scorpio",
+      8:"Saturn in Pisces", 9:"Jupiter in Pisces", 10:"Mars in Pisces",
+    },
+    "Swords": {
+      2:"Moon in Libra", 3:"Saturn in Libra", 4:"Jupiter in Libra",
+      5:"Venus in Aquarius", 6:"Mercury in Aquarius", 7:"Moon in Aquarius",
+      8:"Jupiter in Gemini", 9:"Mars in Gemini", 10:"Sun in Gemini",
+    },
+    "Pentacles": {
+      2:"Jupiter in Capricorn", 3:"Mars in Capricorn", 4:"Sun in Capricorn",
+      5:"Mercury in Taurus", 6:"Moon in Taurus", 7:"Saturn in Taurus",
+      8:"Sun in Virgo", 9:"Venus in Virgo", 10:"Mercury in Virgo",
+    }
+  };
+}
+
+function courtElement(rankName, suitElement){
+  const map = {
+    "Page":   `Earth of ${suitElement}`,
+    "Knight": `Air of ${suitElement}`,
+    "Queen":  `Water of ${suitElement}`,
+    "King":   `Fire of ${suitElement}`,
+  };
+  return map[rankName] || suitElement;
+}
+
+function capitalize(s){ return s ? (s.charAt(0).toUpperCase() + s.slice(1)) : s; }
+
+function composeMeaningU(rank, suit){
+  const base = rank.u;
+  const suitLine = `in the realm of ${suit.theme}`;
+  const spice = rank.court
+    ? `Show up, learn, and let experience teach you.`
+    : `Let it take a clear shape instead of staying a vibe.`;
+  const keywords = `${rank.u.split(";")[0].replace(/\.$/,"")}; ${suit.theme}`;
+  return { keywords, text: `${capitalize(base)} ${suitLine}. ${spice}` };
+}
+function composeMeaningR(rank, suit){
+  const base = rank.r;
+  const suitLine = `shadowed by ${suit.shadow}`;
+  const spice = rank.court
+    ? `Slow down: refine skill, intention, and follow-through.`
+    : `Fix the leak: simplify, choose, and commit.`;
+  const keywords = `${rank.r.split(";")[0].replace(/\.$/,"")}; ${suit.shadow}`;
+  return { keywords, text: `${capitalize(base)} ${suitLine}. ${spice}` };
+}
+
+function buildDeck(){
+  const cards = [];
+  const decans = buildDecanMap();
+
+  // Majors
+  for (const m of MAJORS){
+    cards.push({
+      id: `MA-${m.num}`,
+      arcana: "Major",
+      number: m.num,
+      name: m.name,
+      suit: null,
+      element: m.element,
+      astrology: m.astro,
+      phase: m.phase,
+      keywordsU: m.kwU,
+      keywordsR: m.kwR,
+      meaningU: m.u,
+      meaningR: m.r,
+      glyph: "✦",
+    });
+  }
+
+  // Minors
+  for (const s of SUITS){
+    for (const r of RANKS){
+      const isCourt = !!r.court;
+      const rankName = r.key;
+      const pipNumber = r.n ?? null;
+
+      const title = `${rankName} of ${s.key}`;
+      const id = `MI-${s.key}-${rankName}`;
+
+      let astrology = "";
+      if (!isCourt && pipNumber >= 2 && pipNumber <= 10){
+        astrology = decans[s.key][pipNumber];
+      } else if (!isCourt && pipNumber === 1){
+        astrology = `Root of ${s.element} (Ace)`;
+      } else if (isCourt){
+        const courtElem = courtElement(rankName, s.element);
+        astrology = `${courtElem} (court elemental blend)`;
+      } else {
+        astrology = `${s.element}`;
+      }
+
+      const u = composeMeaningU(r, s);
+      const rev = composeMeaningR(r, s);
+
+      cards.push({
+        id,
+        arcana: "Minor",
+        number: pipNumber,
+        name: title,
+        suit: s.key,
+        element: s.element,
+        astrology,
+        phase: r.phase,
+        keywordsU: u.keywords,
+        keywordsR: rev.keywords,
+        meaningU: u.text,
+        meaningR: rev.text,
+        glyph: s.glyph,
+      });
+    }
+  }
+
+  return cards;
+}
+
+/* =========
+   App State
+   ========= */
+const ALL_CARDS = buildDeck();
+const byId = new Map(ALL_CARDS.map(c => [c.id, c]));
+
+let deckOrder = [];
+let drawn = [];
+let learningMode = false;
+
+function remainingCounts(){
+  let major=0, minor=0;
+  for (const id of deckOrder){
+    const c = byId.get(id);
+    if (c.arcana === "Major") major++; else minor++;
+  }
+  return { total: deckOrder.length, major, minor };
+}
+
+function drawFromFilter(filter){
+  if (deckOrder.length === 0) return null;
+
+  if (filter === "mixed"){
+    return deckOrder.shift();
+  }
+
+  const want = filter === "major" ? "Major" : "Minor";
+  const idx = deckOrder.findIndex(id => byId.get(id).arcana === want);
+  if (idx === -1) return null;
+  const [id] = deckOrder.splice(idx, 1);
+  return id;
+}
+
+/* =========
+   Rendering helpers
+   ========= */
+function majorGlyphFor(name){
+  const n = name.toLowerCase();
+  if (n.includes("fool")) return "☄";
+  if (n.includes("magician")) return "⟡";
+  if (n.includes("priestess")) return "☾";
+  if (n.includes("empress")) return "❀";
+  if (n.includes("emperor")) return "⌁";
+  if (n.includes("hierophant")) return "⛩";
+  if (n.includes("lovers")) return "♢";
+  if (n.includes("chariot")) return "➶";
+  if (n.includes("strength")) return "✹";
+  if (n.includes("hermit")) return "⟣";
+  if (n.includes("wheel")) return "⟲";
+  if (n.includes("justice")) return "⚖";
+  if (n.includes("hanged")) return "⟟";
+  if (n.includes("death")) return "✖";
+  if (n.includes("temperance")) return "☍";
+  if (n.includes("devil")) return "⛓";
+  if (n.includes("tower")) return "⚡";
+  if (n.includes("star")) return "✧";
+  if (n.includes("moon")) return "☽";
+  if (n.includes("sun")) return "☀";
+  if (n.includes("judgement")) return "⟠";
+  if (n.includes("world")) return "◌";
+  if (n.includes("well")) return "⟡";
+  if (n.includes("artist")) return "✎";
+  return "✦";
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
+
+/* =========
+   UI elements
+   ========= */
+const arcanaSel = document.getElementById("arcanaSel");
+const modeSel = document.getElementById("modeSel");
+const countWrap = document.getElementById("countWrap");
+const countSel = document.getElementById("countSel");
+const learnToggle = document.getElementById("learnToggle");
+const drawBtn = document.getElementById("drawBtn");
+const reshuffleBtn = document.getElementById("reshuffleBtn");
+const clearBtn = document.getElementById("clearBtn");
+const copyBtn = document.getElementById("copyBtn");
+const cardsGrid = document.getElementById("cardsGrid");
+const emptyState = document.getElementById("emptyState");
+const logOut = document.getElementById("logOut");
+const toastEl = document.getElementById("toast");
+const hudRemaining = document.getElementById("hudRemaining");
+const hudBreakdown = document.getElementById("hudBreakdown");
+const statusLine = document.getElementById("statusLine");
+const statusHint = document.getElementById("statusHint");
+const seedLine = document.getElementById("seedLine");
+
+let toastTimer = null;
+function toast(msg){
+  clearTimeout(toastTimer);
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  toastTimer = setTimeout(()=> toastEl.classList.remove("show"), 1300);
+}
+function setStatus(line, hint){
+  statusLine.textContent = line;
+  statusHint.textContent = hint;
+}
+
+function renderCard(draw){
+  const c = byId.get(draw.id);
+  const isMajor = c.arcana === "Major";
+  const glyph = isMajor ? majorGlyphFor(c.name) : c.glyph;
+
+  const badgeText = isMajor ? "MAJOR" : `MINOR • ${c.suit.toUpperCase()}`;
+  const numText = isMajor
+    ? `#${c.number}`
+    : (c.number ? `${c.number}` : c.name.split(" ")[0].toUpperCase());
+
+  const orientation = draw.reversed ? "Reversed" : "Upright";
+  const meaning = draw.reversed ? c.meaningR : c.meaningU;
+  const kw = draw.reversed ? c.keywordsR : c.keywordsU;
+
+  const wrap = document.createElement("div");
+  wrap.className = "card" + (learningMode ? " learning" : "");
+  if (draw.reversed) wrap.classList.add("isReversed");
+
+  const ribbon = draw.reversed ? `<div class="revRibbon">Reversed</div>` : "";
+
+  wrap.innerHTML = `
+    ${ribbon}
+    <div class="cardFace" title="${escapeHtml(c.name)} (${orientation})">
+      <div class="cardTop">
+        <div class="badge"><span class="miniDot"></span><span>${badgeText}</span></div>
+        <div class="numSigil">${escapeHtml(numText)}</div>
+      </div>
+
+      <div class="cardMid">
+        <div class="glyph">${escapeHtml(glyph)}</div>
+        <div class="name">${escapeHtml(c.name)}</div>
+        <div class="subtitle">${escapeHtml(orientation)} • Draw #${draw.drawnIndex}</div>
+      </div>
+
+      <div class="cardBottom">
+        <div class="tag">${escapeHtml(c.arcana === "Major" ? c.astrology : c.element)}</div>
+        <div class="tag">${escapeHtml(c.phase)}</div>
+      </div>
+    </div>
+
+    <div class="info">
+      <div class="row">
+        <span class="k">Element: ${escapeHtml(c.element)}</span>
+        <span class="k">Astro: ${escapeHtml(c.astrology)}</span>
+        <span class="k">Phase: ${escapeHtml(c.phase)}</span>
+      </div>
+      <div class="meaning">
+        <div><b>${escapeHtml(orientation)}:</b> ${escapeHtml(meaning)}</div>
+        <div style="margin-top:8px; color: rgba(215,230,255,.82);"><b>Keywords:</b> ${escapeHtml(kw)}</div>
+      </div>
+    </div>
+  `;
+  return wrap;
+}
+
+function updateLog(){
+  const lines = drawn.map(d => {
+    const c = byId.get(d.id);
+    return `${d.drawnIndex}) ${c.name} — ${d.reversed ? "Reversed" : "Upright"}`;
+  });
+  logOut.value = lines.join("\n");
+}
+
+function updateHUD(){
+  const { total, major, minor } = remainingCounts();
+  hudRemaining.textContent = `Remaining: ${total}`;
+  hudBreakdown.textContent = `Major ${major} / Minor ${minor}`;
+  if (total === 0) setStatus("Deck empty.", "Reshuffle to refill the pool.");
+}
+
+function updateCards(){
+  cardsGrid.innerHTML = "";
+  if (drawn.length === 0){
+    emptyState.style.display = "block";
+    return;
+  }
+  emptyState.style.display = "none";
+
+  const frag = document.createDocumentFragment();
+  for (const d of drawn){
+    frag.appendChild(renderCard(d));
+  }
+  cardsGrid.appendChild(frag);
+}
+
+function updateUI(){
+  updateHUD();
+  updateCards();
+  updateLog();
+}
+
+function reshuffle(){
+  deckOrder = ALL_CARDS.map(c => c.id);
+  shuffleInPlace(deckOrder);
+  drawn = [];
+  updateUI();
+  setStatus("Reshuffled.", "All cards returned to the pool. The storm is reset.");
+  toast("Reshuffled.");
+}
+
+function clearTable(){
+  drawn = [];
+  updateUI();
+  setStatus("Table cleared.", "Deck state unchanged (no reshuffle).");
+  toast("Cleared.");
+}
+
+function doDraw(){
+  const filter = arcanaSel.value;
+  const mode = modeSel.value;
+  const n = mode === "multi" ? Math.max(1, Math.floor(Number(countSel.value) || 1)) : 1;
+
+  let pulled = 0;
+  for (let i=0; i<n; i++){
+    const id = drawFromFilter(filter);
+    if (!id) break;
+    const reversed = randomBool();
+    drawn.push({ id, reversed, drawnIndex: drawn.length + 1 });
+    pulled++;
+  }
+
+  if (pulled === 0){
+    setStatus("No cards left in that pool.", "Try another arcana pool, or reshuffle.");
+    toast("Nothing left to draw.");
+    updateUI();
+    return;
+  }
+
+  const msg = (mode === "single") ? "Pulled 1 card." : `Pulled ${pulled} card${pulled===1?"":"s"}.`;
+  setStatus(msg, "Cards are removed from the pool until reshuffle.");
+  toast(msg);
+  updateUI();
+}
+
+/* =========
+   Controls
+   ========= */
+modeSel.addEventListener("change", () => {
+  countWrap.style.display = (modeSel.value === "multi") ? "block" : "none";
+});
+countSel.addEventListener("input", () => {
+  const v = Math.max(1, Math.min(80, Math.floor(Number(countSel.value) || 1)));
+  countSel.value = v;
+});
+
+function setLearning(on){
+  learningMode = !!on;
+  learnToggle.classList.toggle("on", learningMode);
+  learnToggle.setAttribute("aria-pressed", String(learningMode));
+  updateCards();
+  toast(learningMode ? "Learning mode: ON" : "Learning mode: OFF");
+}
+learnToggle.addEventListener("click", () => setLearning(!learningMode));
+learnToggle.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " "){
+    e.preventDefault();
+    setLearning(!learningMode);
+  }
+});
+
+drawBtn.addEventListener("click", doDraw);
+reshuffleBtn.addEventListener("click", reshuffle);
+clearBtn.addEventListener("click", clearTable);
+
+copyBtn.addEventListener("click", async () => {
+  const text = logOut.value.trim();
+  if (!text){
+    toast("Nothing to copy.");
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    toast("Copied.");
+  }catch{
+    logOut.focus();
+    logOut.select();
+    document.execCommand("copy");
+    toast("Copied (fallback).");
+  }
+});
+
+/* =========
+   Boot
+   ========= */
+(function init(){
+  deckOrder = ALL_CARDS.map(c => c.id);
+  shuffleInPlace(deckOrder);
+
+  seedLine.textContent = HAS_CRYPTO ? "RNG: Web Crypto" : "RNG: Math.random (fallback)";
+  if (!HAS_CRYPTO){
+    setStatus("Warning: crypto RNG unavailable.", "Your browser doesn’t support crypto.getRandomValues. Using Math.random fallback.");
+    toast("Crypto RNG unavailable.");
+  } else {
+    setStatus("Ready.", "Draw a card. Or reshuffle to re-randomize the deck order.");
+  }
+
+  updateUI();
+  if (drawn.length === 0) emptyState.style.display = "block";
+})();
+</script>
+</body>
+</html>
