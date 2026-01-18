@@ -1,1260 +1,2293 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>DarkSkies Tarot Draw Simulator</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DarkSkies Tarot Draw</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg0:#05070e;
-      --bg1:#070b18;
-      --ink:#d7e6ff;
-      --muted:#9ab3d6;
-      --blue0:#0b2a5a;
-      --blue1:#0e5bd6;
-      --blue2:#59a8ff;
-      --card0:#070a12;
-      --card1:#0a1024;
-      --line: rgba(120,180,255,.35);
-      --line2: rgba(120,180,255,.18);
-      --shadow: 0 16px 50px rgba(0,0,0,.55);
-      --shadow2: 0 10px 28px rgba(0,0,0,.45);
-      --radius: 18px;
-      --radius2: 22px;
-      --clip: polygon(10% 0%, 92% 0%, 100% 10%, 100% 90%, 90% 100%, 8% 100%, 0% 90%, 0% 10%);
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    :root {
+      /* Dark blues from the moon image */
+      --bg-deep: #050a12;
+      --bg-mid: #0a1628;
+      --bg-card: #0d1f3c;
+      --bg-surface: rgba(13, 31, 60, 0.7);
+      
+      /* Moon glow teal */
+      --glow-primary: #5bb3b8;
+      --glow-light: #7dd4d8;
+      --glow-soft: rgba(91, 179, 184, 0.15);
+      
+      /* Text */
+      --text-bright: #e8f4f5;
+      --text-mid: #a3c4c6;
+      --text-muted: #6a8a8c;
+      
+      /* Accents */
+      --accent-warm: #d4a574;
+      --accent-city: #ffd699;
+      --danger: #c45c5c;
+      
+      /* Suit colors */
+      --wands: #e07a3d;
+      --cups: #5b9bd5;
+      --swords: #a8c7d4;
+      --pentacles: #7ab55c;
+      
+      /* Spacing */
+      --radius: 12px;
+      --radius-lg: 20px;
+      
+      /* Fonts */
+      --font-display: 'Cinzel', serif;
+      --font-body: 'Crimson Pro', serif;
+      --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
     }
 
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: var(--sans);
-      color: var(--ink);
-      background:
-        radial-gradient(1200px 700px at 20% -10%, rgba(89,168,255,.25), transparent 55%),
-        radial-gradient(900px 600px at 90% 10%, rgba(14,91,214,.18), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-      min-height:100vh;
-      overflow-x:hidden;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    body::before{
-      content:"";
-      position:fixed; inset:0;
-      pointer-events:none;
-      background:
-        radial-gradient(900px 420px at 20% 0%, rgba(255,255,255,.06), transparent 60%),
-        radial-gradient(900px 420px at 80% 10%, rgba(255,255,255,.04), transparent 60%),
-        repeating-linear-gradient(115deg, rgba(140,200,255,.10) 0 1px, transparent 1px 10px),
-        radial-gradient(2px 2px at 30% 40%, rgba(255,255,255,.12), transparent 60%),
-        radial-gradient(2px 2px at 70% 60%, rgba(255,255,255,.10), transparent 60%);
-      mix-blend-mode: screen;
-      opacity:.35;
-      filter: blur(.2px);
-    }
-    body::after{
-      content:"";
-      position:fixed; inset:-40px;
-      pointer-events:none;
-      background:
-        radial-gradient(800px 520px at 50% 0%, rgba(0,0,0,.35), transparent 60%),
-        radial-gradient(1200px 600px at 50% 100%, rgba(0,0,0,.45), transparent 70%);
-      opacity:.65;
+    body {
+      font-family: var(--font-body);
+      color: var(--text-bright);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background: var(--bg-deep);
     }
 
-    header{
-      position:sticky; top:0; z-index:5;
-      backdrop-filter: blur(10px);
-      background: linear-gradient(180deg, rgba(5,7,14,.85), rgba(5,7,14,.35));
-      border-bottom: 1px solid rgba(120,180,255,.18);
+    /* Atmospheric background */
+    .bg-atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: url('https://i.postimg.cc/2jcQYxB1/deb5ece0-0ab0-403d-b56e-3a88272326ed.png');
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+    /* Subtle star field */
+    .bg-atmosphere::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image: 
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 60% 20%, rgba(255,255,255,0.25), transparent),
+        radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.15), transparent),
+        radial-gradient(1px 1px at 15% 60%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 75% 85%, rgba(255,255,255,0.18), transparent),
+        radial-gradient(1px 1px at 35% 15%, rgba(255,255,255,0.22), transparent),
+        radial-gradient(1px 1px at 90% 35%, rgba(255,255,255,0.2), transparent);
+      opacity: 0.6;
     }
 
-    .wrap{ max-width: 1200px; margin:0 auto; padding: 18px 18px 26px; position:relative; z-index:1; }
-
-    .titleRow{
-      display:flex; gap:16px; align-items:flex-end; justify-content:space-between; flex-wrap:wrap;
-      padding: 10px 0 8px;
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
     }
-    .brand{ display:flex; flex-direction:column; gap:4px; }
-    .brand h1{
-      margin:0;
-      font-size: 22px;
-      letter-spacing:.6px;
+
+    /* Header */
+    header {
+      text-align: center;
+      padding: 40px 0 30px;
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      font-weight: 600;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
-    }
-    .brand .sub{
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing:.2px;
-    }
-
-    .hud{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;
-      color: var(--muted);
-      font-family: var(--mono);
-      font-size: 12px;
-    }
-    .pill{
-      border:1px solid rgba(120,180,255,.22);
-      background: rgba(10,16,36,.55);
-      padding: 8px 10px;
-      border-radius: 999px;
-      box-shadow: 0 10px 24px rgba(0,0,0,.25);
-      display:flex; gap:10px; align-items:center;
-    }
-    .dot{
-      width:8px; height:8px; border-radius:50%;
-      background: var(--blue2);
-      box-shadow: 0 0 14px rgba(89,168,255,.55);
-    }
-
-    main{ position:relative; z-index:1; }
-
-    .panel{
-      border: 1px solid rgba(120,180,255,.18);
-      background: linear-gradient(180deg, rgba(10,16,36,.65), rgba(7,10,18,.55));
-      border-radius: var(--radius2);
-      padding: 14px;
-      box-shadow: var(--shadow2);
-      overflow:hidden;
-      position:relative;
-    }
-    .panel::before{
-      content:"";
-      position:absolute; inset:-1px;
-      background:
-        radial-gradient(600px 220px at 20% 0%, rgba(89,168,255,.22), transparent 60%),
-        radial-gradient(600px 220px at 90% 20%, rgba(14,91,214,.18), transparent 60%);
-      opacity:.65;
-      pointer-events:none;
-    }
-
-    .controls{
-      display:grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 14px;
-      align-items:start;
-      position:relative;
-      z-index:1;
-    }
-    @media (max-width: 860px){
-      .controls{ grid-template-columns: 1fr; }
-    }
-
-    .ctrlGrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 560px){
-      .ctrlGrid{ grid-template-columns: 1fr; }
-    }
-
-    label{
-      display:block;
-      font-size: 12px;
-      color: var(--muted);
-      letter-spacing:.3px;
-      margin: 0 0 6px;
-      text-transform: uppercase;
-    }
-
-    select,input[type="number"],button,textarea{
-      font-family: var(--sans);
-    }
-
-    select,input[type="number"]{
-      width:100%;
-      background: rgba(5,7,14,.55);
-      border: 1px solid rgba(120,180,255,.20);
-      color: var(--ink);
-      border-radius: 14px;
-      padding: 10px 12px;
-      outline:none;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.2);
-    }
-    select:focus,input[type="number"]:focus,textarea:focus{
-      border-color: rgba(89,168,255,.55);
-      box-shadow: 0 0 0 3px rgba(89,168,255,.15);
-    }
-
-    .btnRow{
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-      margin-top: 10px;
-    }
-    button{
-      border: 1px solid rgba(120,180,255,.22);
-      background: linear-gradient(180deg, rgba(11,42,90,.8), rgba(7,10,18,.75));
-      color: var(--ink);
-      padding: 10px 14px;
-      border-radius: 16px;
-      cursor:pointer;
-      box-shadow: 0 12px 24px rgba(0,0,0,.35);
-      transition: transform .08s ease, filter .12s ease, border-color .12s ease;
-      position:relative;
-      overflow:hidden;
-    }
-    button::before{
-      content:"";
-      position:absolute; inset:0;
-      background:
-        radial-gradient(240px 80px at 20% 0%, rgba(89,168,255,.25), transparent 60%),
-        radial-gradient(240px 80px at 80% 30%, rgba(14,91,214,.20), transparent 60%),
-        linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
-      opacity:.9;
-      pointer-events:none;
-    }
-    button:hover{ filter: brightness(1.05); border-color: rgba(89,168,255,.45); }
-    button:active{ transform: translateY(1px) scale(.99); }
-    .btnAlt{ background: linear-gradient(180deg, rgba(10,16,36,.75), rgba(7,10,18,.75)); }
-    .btnDanger{
-      background: linear-gradient(180deg, rgba(50,10,18,.75), rgba(7,10,18,.75));
-      border-color: rgba(255,120,160,.20);
-    }
-
-    .toggle{
-      display:flex; align-items:center; gap:10px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(120,180,255,.18);
-      background: rgba(5,7,14,.40);
-      user-select:none;
-      cursor:pointer;
-    }
-    .toggle input{ display:none; }
-    .switch{
-      width: 46px; height: 26px;
-      border-radius: 999px;
-      border: 1px solid rgba(120,180,255,.22);
-      background: rgba(7,10,18,.7);
-      position:relative;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
-      flex: 0 0 auto;
-    }
-    .knob{
-      position:absolute; top:3px; left:3px;
-      width: 20px; height: 20px; border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,.9), rgba(89,168,255,.65) 55%, rgba(14,91,214,.35));
-      box-shadow: 0 0 18px rgba(89,168,255,.40);
-      transition: transform .14s ease;
-    }
-    .toggle.on .knob{ transform: translateX(20px); }
-    .toggle.on .switch{
-      border-color: rgba(89,168,255,.55);
-      box-shadow: 0 0 0 3px rgba(89,168,255,.12), inset 0 0 0 1px rgba(0,0,0,.25);
-    }
-    .toggle .tTxt{ display:flex; flex-direction:column; gap:2px; }
-    .toggle .tTitle{ font-size: 13px; letter-spacing:.2px; }
-    .toggle .tHint{
-      font-size: 12px;
-      color: var(--muted);
-      font-family: var(--mono);
-    }
-
-    .note{
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 8px;
-      line-height:1.35;
-    }
-
-    .cardsPanel{ margin-top: 14px; padding: 14px; }
-
-    .cardsGrid{
-      display:grid;
-      grid-template-columns: repeat(5, minmax(140px, 1fr));
-      gap: 12px;
-      position:relative;
-      z-index:1;
-    }
-    @media (max-width: 1100px){ .cardsGrid{ grid-template-columns: repeat(4, minmax(140px, 1fr)); } }
-    @media (max-width: 900px){ .cardsGrid{ grid-template-columns: repeat(3, minmax(140px, 1fr)); } }
-    @media (max-width: 640px){ .cardsGrid{ grid-template-columns: repeat(2, minmax(140px, 1fr)); } }
-
-    .card{
-      border-radius: var(--radius2);
-      position:relative;
-      box-shadow: var(--shadow);
-      border: 1px solid rgba(120,180,255,.20);
-      background: linear-gradient(180deg, rgba(7,10,18,.85), rgba(10,16,36,.65));
-      overflow:hidden;
-      transform: translateZ(0);
-    }
-
-    .cardFace{
-      aspect-ratio: 3 / 5;
-      clip-path: var(--clip);
-      position:relative;
-      padding: 12px;
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      gap: 10px;
-      background:
-        radial-gradient(500px 220px at 50% 0%, rgba(89,168,255,.18), transparent 60%),
-        radial-gradient(500px 280px at 20% 90%, rgba(14,91,214,.12), transparent 70%),
-        linear-gradient(180deg, rgba(7,10,18,.92), rgba(10,16,36,.80));
-      border: 1px solid rgba(120,180,255,.15);
-      border-radius: 20px;
-      margin: 10px;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
-      transition: transform .18s ease, filter .18s ease;
-    }
-
-    .card:hover .cardFace{ filter: brightness(1.06); transform: translateY(-2px); }
-
-    .cardFace::before{
-      content:"";
-      position:absolute; inset:0;
-      background:
-        radial-gradient(180px 120px at 20% 28%, rgba(255,255,255,.06), transparent 60%),
-        radial-gradient(220px 150px at 70% 18%, rgba(255,255,255,.05), transparent 62%),
-        radial-gradient(200px 150px at 45% 75%, rgba(255,255,255,.04), transparent 65%),
-        repeating-linear-gradient(115deg, rgba(140,200,255,.10) 0 1px, transparent 1px 9px);
-      opacity:.65;
-      mix-blend-mode: screen;
-      pointer-events:none;
-    }
-    .cardFace::after{
-      content:"";
-      position:absolute; inset:-60px;
-      background:
-        radial-gradient(800px 280px at 50% 30%, rgba(0,0,0,.35), transparent 60%),
-        radial-gradient(360px 220px at 80% 85%, rgba(0,0,0,.25), transparent 62%);
-      opacity:.85;
-      pointer-events:none;
-    }
-
-    .cardTop{ position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
-    .badge{
-      font-family: var(--mono);
-      font-size: 11px;
-      letter-spacing:.3px;
-      color: rgba(215,230,255,.9);
-      border: 1px solid rgba(120,180,255,.20);
-      background: rgba(5,7,14,.45);
-      padding: 6px 8px;
-      border-radius: 999px;
-      display:inline-flex; gap:8px; align-items:center;
-    }
-    .badge .miniDot{
-      width:6px; height:6px; border-radius:50%;
-      background: rgba(89,168,255,.9);
-      box-shadow: 0 0 12px rgba(89,168,255,.45);
-    }
-    .numSigil{
-      font-family: var(--mono);
-      font-size: 14px;
-      letter-spacing:.5px;
-      padding: 6px 10px;
-      border-radius: 14px;
-      background: rgba(11,42,90,.55);
-      border: 1px solid rgba(120,180,255,.25);
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.22);
-      white-space:nowrap;
-    }
-
-    .cardMid{
-      position:relative; z-index:1;
-      display:flex; flex-direction:column; align-items:center; gap:8px;
-      text-align:center;
-      padding: 6px 0;
-    }
-    .glyph{
-      font-size: 36px;
-      line-height:1;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
-      opacity:.96;
-    }
-    .name{
-      font-weight: 750;
-      letter-spacing:.5px;
-      text-transform: uppercase;
-      font-size: 13px;
-      line-height: 1.2;
-      text-shadow: 0 12px 24px rgba(0,0,0,.55);
-    }
-    .subtitle{ font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing:.2px; }
-
-    .cardBottom{
-      position:relative; z-index:1;
-      display:flex; justify-content:space-between; align-items:center; gap:8px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: rgba(215,230,255,.82);
-    }
-    .tag{
-      padding: 6px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(120,180,255,.18);
-      background: rgba(5,7,14,.45);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width: 70%;
-    }
-    .revRibbon{
-      position:absolute;
-      top: 8px; right: -34px;
-      transform: rotate(35deg);
-      background: rgba(89,168,255,.16);
-      border: 1px solid rgba(89,168,255,.30);
-      color: rgba(215,230,255,.95);
-      font-family: var(--mono);
-      font-size: 11px;
-      padding: 6px 38px;
-      letter-spacing:.35px;
-      text-transform: uppercase;
-      box-shadow: 0 12px 26px rgba(0,0,0,.35);
-      z-index: 3;
-    }
-
-    .isReversed .cardFace{ transform: rotate(180deg); }
-    .isReversed:hover .cardFace{ transform: rotate(180deg) translateY(-2px); }
-
-    .info{
-      border-top: 1px solid rgba(120,180,255,.16);
-      padding: 12px 12px 12px;
-      display:none;
-      background: rgba(5,7,14,.35);
-    }
-    .card.learning .info{ display:block; }
-    .info .row{
-      display:flex; gap:10px; flex-wrap:wrap;
+      background: linear-gradient(180deg, var(--text-bright), var(--glow-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
       margin-bottom: 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .k{
-      font-family: var(--mono);
-      border: 1px solid rgba(120,180,255,.16);
-      background: rgba(10,16,36,.55);
-      padding: 6px 8px;
-      border-radius: 12px;
-    }
-    .meaning{
-      font-size: 12.5px;
-      line-height: 1.35;
-      color: rgba(215,230,255,.90);
-    }
-    .meaning b{ color: rgba(215,230,255,.98); }
-
-    .empty{
-      padding: 22px 14px;
-      color: var(--muted);
-      text-align:center;
-      font-family: var(--mono);
-      border: 1px dashed rgba(120,180,255,.22);
-      border-radius: var(--radius2);
-      background: rgba(5,7,14,.25);
     }
 
-    .logPanel{ margin-top: 14px; padding: 14px; }
-    textarea{
-      width:100%;
-      min-height: 160px;
-      background: rgba(5,7,14,.55);
-      border: 1px solid rgba(120,180,255,.20);
-      color: rgba(215,230,255,.92);
-      border-radius: 16px;
-      padding: 12px 12px;
-      font-family: var(--mono);
-      font-size: 12px;
-      line-height: 1.4;
-      resize: vertical;
-      outline:none;
+    .tagline {
+      font-family: var(--font-body);
+      font-size: 1.1rem;
+      font-style: italic;
+      color: var(--text-muted);
+      font-weight: 300;
     }
 
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom: 16px;
-      transform: translateX(-50%);
-      background: rgba(7,10,18,.92);
-      border: 1px solid rgba(120,180,255,.25);
-      border-radius: 999px;
-      padding: 10px 14px;
-      color: rgba(215,230,255,.95);
-      font-family: var(--mono);
-      font-size: 12px;
-      box-shadow: 0 16px 40px rgba(0,0,0,.55);
-      opacity:0;
-      pointer-events:none;
-      transition: opacity .18s ease, transform .18s ease;
-      z-index:999;
+    /* Panels */
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid rgba(91, 179, 184, 0.2);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+      backdrop-filter: blur(10px);
+      position: relative;
     }
-    .toast.show{
-      opacity:1;
-      transform: translateX(-50%) translateY(-2px);
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(91, 179, 184, 0.1), transparent 60%);
+      pointer-events: none;
     }
-    .small{
-      font-size: 11px;
-      color: var(--muted);
+
+    /* Controls Grid */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    select {
+      font-family: var(--font-body);
+      font-size: 1rem;
+      padding: 12px 16px;
+      background: rgba(5, 10, 18, 0.8);
+      border: 1px solid rgba(91, 179, 184, 0.3);
+      border-radius: var(--radius);
+      color: var(--text-bright);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235bb3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+
+    select:hover {
+      border-color: var(--glow-primary);
+    }
+
+    select:focus {
+      outline: none;
+      border-color: var(--glow-light);
+      box-shadow: 0 0 0 3px rgba(91, 179, 184, 0.15);
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    button {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      padding: 14px 24px;
+      border: 1px solid rgba(91, 179, 184, 0.4);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, rgba(91, 179, 184, 0.3), rgba(91, 179, 184, 0.15));
+      color: var(--text-bright);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(180deg, rgba(91, 179, 184, 0.4), rgba(91, 179, 184, 0.25));
+      border-color: var(--glow-light);
+      box-shadow: 0 0 20px rgba(91, 179, 184, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(5, 10, 18, 0.6);
+      color: var(--text-mid);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(13, 31, 60, 0.8);
+      border-color: rgba(91, 179, 184, 0.5);
+      color: var(--text-bright);
+    }
+
+    .btn-danger {
+      background: rgba(196, 92, 92, 0.15);
+      border-color: rgba(196, 92, 92, 0.4);
+      color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: rgba(196, 92, 92, 0.25);
+      border-color: var(--danger);
+    }
+
+    /* HUD / Status */
+    .hud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: rgba(5, 10, 18, 0.5);
+      border-radius: var(--radius);
+      margin-top: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      position: relative;
+      z-index: 1;
+    }
+
+    .hud-stat {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--glow-primary);
+      box-shadow: 0 0 10px var(--glow-primary);
+    }
+
+    /* Cards Grid */
+    .cards-panel {
+  min-height: 200px;
+  background-image: url('https://i.postimg.cc/tR25Tj8n/Table-Surface.png');
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--radius-lg);
+}
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .empty-state .moon-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* Individual Card */
+    .card-wrapper {
+      perspective: 1000px;
+    }
+
+    .card {
+      position: relative;
+      aspect-ratio: 2.5 / 4;
+      transform-style: preserve-3d;
+      transition: transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    /* Card Back - placeholder for custom art */
+    .card-back {
+  background-image: url('https://i.postimg.cc/zX7986F0/Card-Back.png');
+  background-size: cover;
+  background-position: center;
+  border: 2px solid rgba(91, 179, 184, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+    .card-back-inner {
+      width: 70%;
+      height: 80%;
+      border: 1px solid rgba(91, 179, 184, 0.3);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at center, rgba(91, 179, 184, 0.1), transparent 70%);
+    }
+
+    .card-back-symbol {
+      font-size: 2.5rem;
+      color: var(--glow-primary);
+      opacity: 0.6;
+    }
+
+    /* Card Front */
+    .card-front {
+      transform: rotateY(180deg);
+      background: linear-gradient(180deg, var(--bg-card), var(--bg-deep));
+      border: 2px solid rgba(91, 179, 184, 0.4);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+
+    .card-arcana {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.05em;
+      padding: 4px 8px;
+      background: rgba(91, 179, 184, 0.15);
+      border-radius: 4px;
+      color: var(--glow-light);
+    }
+
+    .card-number {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .card-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .card-glyph {
+      font-size: 2.5rem;
+      line-height: 1;
+      filter: drop-shadow(0 0 10px rgba(91, 179, 184, 0.5));
+    }
+
+    .card-name {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-bright);
+    }
+
+    .card-orientation {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .card-orientation.reversed {
+      color: var(--accent-warm);
+    }
+
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    /* Reversed card styling */
+    .card.is-reversed .card-front {
+      border-color: rgba(212, 165, 116, 0.4);
+    }
+
+    .card.is-reversed .card-glyph {
+      transform: rotate(180deg);
+      filter: drop-shadow(0 0 10px rgba(212, 165, 116, 0.5));
+    }
+
+    /* Card meaning panel (appears below card) */
+    .card-meaning {
+      margin-top: 12px;
+      padding: 12px;
+      background: rgba(5, 10, 18, 0.6);
+      border-radius: var(--radius);
+      border: 1px solid rgba(91, 179, 184, 0.15);
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-mid);
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: all 0.4s ease 0.5s;
+    }
+
+    .card-meaning.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .card-meaning.hidden {
+      display: none;
+    }
+
+    .meaning-position {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--glow-primary);
+      margin-bottom: 6px;
+    }
+
+    .meaning-angle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+
+    .meaning-text {
+      color: var(--text-bright);
+    }
+
+    .meaning-genre {
       margin-top: 8px;
-      line-height:1.35;
+      padding-top: 8px;
+      border-top: 1px solid rgba(91, 179, 184, 0.1);
+      font-style: italic;
+      color: var(--text-muted);
     }
 
-    .divider{
-      height:1px;
-      background: rgba(120,180,255,.16);
-      margin: 12px 0;
+    /* Suit colors on cards */
+    .suit-wands .card-glyph { color: var(--wands); }
+    .suit-cups .card-glyph { color: var(--cups); }
+    .suit-swords .card-glyph { color: var(--swords); }
+    .suit-pentacles .card-glyph { color: var(--pentacles); }
+    .suit-major .card-glyph { color: var(--glow-light); }
+
+    /* Log panel */
+    .log-panel textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 16px;
+      background: rgba(5, 10, 18, 0.8);
+      border: 1px solid rgba(91, 179, 184, 0.2);
+      border-radius: var(--radius);
+      color: var(--text-mid);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.6;
+      resize: vertical;
+    }
+
+    .log-panel textarea:focus {
+      outline: none;
+      border-color: rgba(91, 179, 184, 0.4);
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card);
+      border: 1px solid rgba(91, 179, 184, 0.4);
+      border-radius: 999px;
+      padding: 12px 24px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-bright);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .container {
+        padding: 16px;
+      }
+      
+      .panel {
+        padding: 16px;
+      }
+      
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 16px;
+      }
+      
+      .moon {
+        width: 50px;
+        height: 50px;
+        top: 5%;
+        right: 10%;
+      }
     }
   </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="titleRow">
-      <div class="brand">
-        <h1>DarkSkies Tarot Draw Simulator</h1>
-        <div class="sub">Because I just discovered tarot is kind of awesome, and it is now a character trait. ⚡️</div>
-      </div>
-      <div class="hud">
-        <div class="pill" title="Current deck state">
-          <span class="dot"></span>
-          <span id="hudRemaining">Remaining: 0</span>
-          <span>•</span>
-          <span id="hudBreakdown">Major 0 / Minor 0</span>
+  <div class="bg-atmosphere"></div>
+
+  <div class="container">
+    <header>
+      <h1>DarkSkies Tarot</h1>
+      <p class="tagline">Character inspiration through the cards</p>
+    </header>
+
+    <main>
+      <!-- Controls Panel -->
+      <section class="panel controls-panel">
+        <div class="controls-grid">
+          <div class="control-group">
+            <label for="positionSelect">Drawing For</label>
+            <select id="positionSelect">
+              <option value="general">Just Draw</option>
+              <optgroup label="Character">
+                <option value="identity">Core Identity</option>
+                <option value="personality">Personality</option>
+                <option value="motivation">Motivation</option>
+                <option value="shadow">Shadow / Conflict</option>
+                <option value="fears">Fears</option>
+                <option value="backstory">Backstory</option>
+                <option value="relationship">Relationship Dynamic</option>
+                <option value="appearance">Appearance</option>
+                <option value="skills">Skills / Abilities</option>
+              </optgroup>
+              <optgroup label="World">
+                <option value="setting">Setting / Era</option>
+                <option value="genre">Genre Energy</option>
+                <option value="tone">Tone / Mood</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="genreSelect">Genre Lens</label>
+            <select id="genreSelect">
+              <option value="neutral">Neutral</option>
+              <option value="drama">Drama</option>
+              <option value="blackComedy">Black Comedy</option>
+              <option value="lightComedy">Light Comedy</option>
+              <option value="romance">Romance</option>
+              <option value="action">Action</option>
+              <option value="horror">Horror</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="deckSelect">Draw From</label>
+            <select id="deckSelect">
+              <option value="any">Full Deck</option>
+              <option value="major">Major Arcana Only</option>
+              <option value="minor">Minor Arcana Only</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="meaningSelect">Meaning Depth</label>
+            <select id="meaningSelect">
+              <option value="detailed">Detailed</option>
+              <option value="brief">Brief</option>
+              <option value="hidden">Hidden</option>
+            </select>
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div class="btn-row">
+          <button id="drawBtn" class="btn-primary">☽ Draw Card</button>
+          <button id="reshuffleBtn" class="btn-secondary">↻ Reshuffle</button>
+          <button id="clearBtn" class="btn-danger">✕ Clear Table</button>
+          <button id="copyBtn" class="btn-secondary">⎘ Copy Log</button>
+        </div>
+
+        <div class="hud">
+          <div class="hud-stat">
+            <span class="hud-dot"></span>
+            <span id="hudRemaining">Remaining: 80</span>
+          </div>
+          <div class="hud-stat">
+            <span id="hudBreakdown">Major: 24 / Minor: 56</span>
+          </div>
+          <div class="hud-stat">
+            <span id="statusText">Ready to draw</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Cards Display -->
+      <section class="panel cards-panel">
+        <div id="cardsGrid" class="cards-grid"></div>
+        <div id="emptyState" class="empty-state">
+          <div class="moon-icon">☽</div>
+          <p>No cards drawn yet.<br>The deck awaits.</p>
+        </div>
+      </section>
+
+      <!-- Log Panel -->
+      <section class="panel log-panel">
+        <label for="logOutput">Draw Log</label>
+        <textarea id="logOutput" readonly placeholder="Your draws will appear here..."></textarea>
+      </section>
+    </main>
   </div>
-</header>
 
-<main class="wrap">
-  <section class="panel">
-    <div class="controls">
-      <div>
-        <div class="ctrlGrid">
-          <div>
-            <label for="arcanaSel">Arcana pool</label>
-            <select id="arcanaSel">
-              <option value="mixed">Mixed (Major + Minor)</option>
-              <option value="major">Major Arcana only</option>
-              <option value="minor">Minor Arcana only</option>
-            </select>
-          </div>
-          <div>
-            <label for="modeSel">Draw mode</label>
-            <select id="modeSel">
-              <option value="single">Single card</option>
-              <option value="multi">Multiple cards</option>
-            </select>
-          </div>
-          <div id="countWrap" style="display:none;">
-            <label for="countSel">How many cards?</label>
-            <input id="countSel" type="number" min="1" max="80" value="3" />
-          </div>
-          <div>
-            <label>Learning mode</label>
-            <div id="learnToggle" class="toggle" role="button" tabindex="0" aria-pressed="false">
-              <div class="switch"><div class="knob"></div></div>
-              <div class="tTxt">
-                <div class="tTitle">Show meanings + correspondences</div>
-                <div class="tHint">elements • astrology • “phase” • upright/reversed</div>
-              </div>
-            </div>
-          </div>
-        </div>
+  <div id="toast" class="toast"></div>
 
-        <div class="btnRow">
-          <button id="drawBtn">Draw</button>
-          <button id="reshuffleBtn" class="btnAlt" title="Reshuffle deck and return all cards to the pool">Reshuffle</button>
-          <button id="clearBtn" class="btnDanger" title="Clear the table of drawn cards (does not reshuffle)">Clear table</button>
-          <button id="copyBtn" class="btnAlt" title="Copy the draw log">Copy log</button>
-        </div>
+  <script>
+    /* =========================================
+       CRYPTOGRAPHIC RNG
+       ========================================= */
+    const HAS_CRYPTO = !!(window.crypto && crypto.getRandomValues);
 
-        <div class="note">
-          Cards are removed from the pool as you draw, until you reshuffle. Reversals are randomized per draw.
-          Randomness uses <span style="font-family:var(--mono)">crypto.getRandomValues</span>.
-        </div>
-      </div>
-
-      <div>
-        <label>Current pile status</label>
-        <div class="panel" style="padding:12px; background: rgba(5,7,14,.35);">
-          <div style="position:relative; z-index:1;">
-            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;">
-              <div>
-                <div style="font-family:var(--mono); font-size:13px;" id="statusLine">Ready.</div>
-                <div class="small" id="statusHint">Reshuffle to start fresh. Draw to begin pulling cards.</div>
-              </div>
-              <div class="pill" style="margin-left:auto;">
-                <span class="miniDot" style="width:6px;height:6px;border-radius:50%;background:rgba(89,168,255,.9);box-shadow:0 0 12px rgba(89,168,255,.45)"></span>
-                <span id="seedLine">RNG: Web Crypto</span>
-              </div>
-            </div>
-            <div class="divider"></div>
-            <div class="small">
-              <b>Bonus cards included:</b> <span style="font-family:var(--mono)">22 The Well</span> and <span style="font-family:var(--mono)">23 The Artist</span> (Ethereal Visions extra majors).
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="panel cardsPanel" aria-label="Drawn cards">
-    <div id="cardsGrid" class="cardsGrid"></div>
-    <div id="emptyState" class="empty" style="display:none;">
-      No cards drawn yet. Hit <b>Draw</b> to pull from the storm. ☁️⚡️
-    </div>
-  </section>
-
-  <section class="panel logPanel" aria-label="Copy-paste draw log">
-    <label for="logOut">Copy-paste log (order + upright/reversed)</label>
-    <textarea id="logOut" readonly spellcheck="false"></textarea>
-    <div class="small">
-      Format: <span style="font-family:var(--mono)">1) Card Name — Upright/Reversed</span>
-    </div>
-  </section>
-
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-</main>
-
-<script>
-/* =========
-   RNG — Web Crypto (unbiased ints + Fisher–Yates)
-   ========= */
-const HAS_CRYPTO = !!(window.crypto && crypto.getRandomValues);
-
-function cryptoRandomUint32(){
-  const a = new Uint32Array(1);
-  crypto.getRandomValues(a);
-  return a[0];
-}
-
-function cryptoRandomInt(maxExclusive){
-  if (maxExclusive <= 0 || !Number.isFinite(maxExclusive)) throw new Error("maxExclusive must be > 0");
-  const max = Math.floor(maxExclusive);
-
-  // Unbiased via rejection sampling
-  const limit = Math.floor(0x100000000 / max) * max;
-  let x;
-  do { x = cryptoRandomUint32(); } while (x >= limit);
-  return x % max;
-}
-
-function shuffleInPlace(arr){
-  for (let i = arr.length - 1; i > 0; i--){
-    const j = HAS_CRYPTO ? cryptoRandomInt(i + 1) : Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function randomBool(){
-  return HAS_CRYPTO ? ((cryptoRandomUint32() & 1) === 1) : (Math.random() < 0.5);
-}
-
-/* =========
-   Tarot Data
-   ========= */
-const SUITS = [
-  { key:"Wands",     element:"Fire",  glyph:"🜂", suitTag:"Wands",  theme:"drive, passion, ambition, spark", shadow:"impulsiveness, burnout, ego" },
-  { key:"Cups",      element:"Water", glyph:"🜄", suitTag:"Cups",   theme:"emotion, bonds, intuition, heart", shadow:"avoidance, over-attachment, moodiness" },
-  { key:"Swords",    element:"Air",   glyph:"🜁", suitTag:"Swords", theme:"mind, truth, choices, conflict",   shadow:"overthinking, cruelty, anxiety" },
-  { key:"Pentacles", element:"Earth", glyph:"🜃", suitTag:"Pents",  theme:"body, work, resources, reality",   shadow:"greed, stagnation, insecurity" },
-];
-
-const RANKS = [
-  { key:"Ace",   n:1,  phase:"Seed / Spark",
-    u:"a pure beginning; potential that wants a shape",
-    r:"a false start; potential blocked or leaking away" },
-  { key:"Two",   n:2,  phase:"Duality / Choice",
-    u:"tension that creates options; a decision point",
-    r:"indecision; a split that becomes a stall" },
-  { key:"Three", n:3,  phase:"Growth / Expression",
-    u:"expansion; first results; momentum becomes visible",
-    r:"misalignment; growth without direction" },
-  { key:"Four",  n:4,  phase:"Stability / Structure",
-    u:"foundations; boundaries; a steady platform",
-    r:"rigidity; comfort turning into a cage" },
-  { key:"Five",  n:5,  phase:"Disruption / Friction",
-    u:"challenge; change via stress; the test arrives",
-    r:"conflict avoided; lessons postponed (and louder later)" },
-  { key:"Six",   n:6,  phase:"Harmony / Exchange",
-    u:"balance restored; give-and-take; supportive flow",
-    r:"unequal exchange; harmony that’s performative" },
-  { key:"Seven", n:7,  phase:"Trial / Refinement",
-    u:"a skill check; strategy; pressure reveals truth",
-    r:"shortcuts; scattered effort; confidence without grounding" },
-  { key:"Eight", n:8,  phase:"Momentum / Craft",
-    u:"movement; repetition; skill sharpening into mastery",
-    r:"stagnation; busywork; motion without progress" },
-  { key:"Nine",  n:9,  phase:"Fruition / Near-Completion",
-    u:"almost there; ripening; personal payoff",
-    r:"diminishing returns; fear of finishing; self-sabotage" },
-  { key:"Ten",   n:10, phase:"Completion / Overflow",
-    u:"the cycle peaks; responsibility or abundance arrives",
-    r:"collapse from excess; refusing to end what’s ended" },
-  { key:"Page",  court:true, phase:"Student / Messenger",
-    u:"curiosity; messages; learning by doing",
-    r:"immaturity; scattered attention; ignoring the message" },
-  { key:"Knight",court:true, phase:"Quest / Motion",
-    u:"pursuit; momentum; courage to act",
-    r:"recklessness; charging without aim; burnout" },
-  { key:"Queen", court:true, phase:"Integration / Depth",
-    u:"inner mastery; nurturing power; embodied wisdom",
-    r:"coldness or overwhelm; power turned inward against self" },
-  { key:"King",  court:true, phase:"Command / Stewardship",
-    u:"leadership; responsibility; steady authority",
-    r:"control issues; brittle ego; authority without care" },
-];
-
-/* Majors: meanings + keywords are separate now (this was the bug). */
-const MAJORS = [
-  { num:0,  name:"The Fool", element:"Air", astro:"Uranus", phase:"Leap / Innocence",
-    kwU:"beginnings; openness; trust; adventure; spontaneity",
-    kwR:"recklessness; naivety; poor timing; folly; risk",
-    u:"Beginnings, trust, spontaneity.", r:"Recklessness, naivety, poor timing." },
-
-  { num:1,  name:"The Magician", element:"Air", astro:"Mercury", phase:"Will / Focus",
-    kwU:"skill; focus; manifestation; tools; initiative",
-    kwR:"trickery; scattered energy; manipulation; unused talent",
-    u:"Skill, initiative, manifestation.", r:"Trickery, scattered power, half-truths." },
-
-  { num:2,  name:"The High Priestess", element:"Water", astro:"Moon", phase:"Intuition / Veil",
-    kwU:"intuition; mystery; inner voice; secrets; patience",
-    kwR:"ignored intuition; confusion; hidden motives; repression",
-    u:"Inner knowing, mystery, sacred silence.", r:"Ignored intuition, secrets, confusion." },
-
-  { num:3,  name:"The Empress", element:"Earth", astro:"Venus", phase:"Creation / Abundance",
-    kwU:"nurture; beauty; fertility; comfort; growth",
-    kwR:"creative block; neglect; smothering; depletion",
-    u:"Nurture, beauty, growth.", r:"Smothering, creative blocks, neglect." },
-
-  { num:4,  name:"The Emperor", element:"Fire", astro:"Aries", phase:"Structure / Rule",
-    kwU:"authority; order; protection; discipline; boundaries",
-    kwR:"rigidity; tyranny; instability; control issues",
-    u:"Order, protection, leadership.", r:"Rigid control, dominance, instability." },
-
-  { num:5,  name:"The Hierophant", element:"Earth", astro:"Taurus", phase:"Tradition / Teaching",
-    kwU:"tradition; values; mentorship; community; doctrine",
-    kwR:"nonconformity; hollow rules; bad counsel; rebellion",
-    u:"Values, guidance, institutions.", r:"Rebellion, hollow rituals, bad advice." },
-
-  { num:6,  name:"The Lovers", element:"Air", astro:"Gemini", phase:"Union / Choice",
-    kwU:"union; alignment; choice; devotion; honesty",
-    kwR:"disharmony; temptation; mixed values; imbalance",
-    u:"Bond, alignment, meaningful choice.", r:"Disharmony, temptation, misalignment." },
-
-  { num:7,  name:"The Chariot", element:"Water", astro:"Cancer", phase:"Victory / Drive",
-    kwU:"determination; victory; willpower; direction; control",
-    kwR:"loss of control; aggression; scattered focus; derailment",
-    u:"Momentum, determination, control.", r:"Loss of direction, forcing outcomes." },
-
-  { num:8,  name:"Strength", element:"Fire", astro:"Leo", phase:"Courage / Heart",
-    kwU:"courage; compassion; patience; resilience; inner power",
-    kwR:"self-doubt; reactivity; insecurity; low stamina",
-    u:"Compassionate power, bravery.", r:"Self-doubt, reactivity, weakness of will." },
-
-  { num:9,  name:"The Hermit", element:"Earth", astro:"Virgo", phase:"Insight / Solitude",
-    kwU:"introspection; guidance; solitude; wisdom; searching",
-    kwR:"isolation; withdrawal; loneliness; avoidance",
-    u:"Guidance within, reflection.", r:"Isolation, avoidance, fear of people." },
-
-  { num:10, name:"Wheel of Fortune", element:"Fire", astro:"Jupiter", phase:"Change / Turning",
-    kwU:"cycles; fate; luck; turning point; momentum shift",
-    kwR:"setbacks; resistance; bad timing; stuck cycle",
-    u:"Cycles, luck, pivot points.", r:"Resistance to change, bad timing." },
-
-  { num:11, name:"Justice", element:"Air", astro:"Libra", phase:"Balance / Truth",
-    kwU:"truth; fairness; accountability; clarity; ethics",
-    kwR:"bias; dishonesty; denial; unfairness; imbalance",
-    u:"Fairness, clarity, consequences.", r:"Bias, denial, dodging accountability." },
-
-  { num:12, name:"The Hanged Man", element:"Water", astro:"Neptune", phase:"Surrender / Reframe",
-    kwU:"pause; surrender; new perspective; sacrifice; release",
-    kwR:"stalling; martyrdom; refusal; stuck viewpoint",
-    u:"Pause, perspective shift, sacrifice.", r:"Stalling, martyrdom, refusal to let go." },
-
-  { num:13, name:"Death", element:"Water", astro:"Scorpio", phase:"Release / Transition",
-    kwU:"ending; transformation; rebirth; clearing; transition",
-    kwR:"clinging; fear; stagnation; decay; prolonged ending",
-    u:"Endings, transformation, renewal.", r:"Clinging, fear of change, decay." },
-
-  { num:14, name:"Temperance", element:"Fire", astro:"Sagittarius", phase:"Alchemy / Blend",
-    kwU:"balance; moderation; integration; healing; synergy",
-    kwR:"excess; extremes; imbalance; poor mixing; friction",
-    u:"Moderation, integration, healing.", r:"Excess, imbalance, poor mixing." },
-
-  { num:15, name:"The Devil", element:"Earth", astro:"Capricorn", phase:"Bondage / Desire",
-    kwU:"attachment; temptation; shadow; material trap; dependency",
-    kwR:"release; awareness; breaking chains; reclaiming power",
-    u:"Attachment, temptation, material traps.", r:"Breaking chains, awareness, liberation." },
-
-  { num:16, name:"The Tower", element:"Fire", astro:"Mars", phase:"Revelation / Shock",
-    kwU:"upheaval; revelation; rupture; truth; liberation",
-    kwR:"averted crisis; delayed change; fear of fallout; rebuilding",
-    u:"Sudden truth, collapse of illusion.", r:"Avoided disaster, delayed wake-up call." },
-
-  { num:17, name:"The Star", element:"Air", astro:"Aquarius", phase:"Hope / Guidance",
-    kwU:"hope; renewal; inspiration; calm; faith",
-    kwR:"discouragement; doubt; dimmed hope; low trust",
-    u:"Renewal, inspiration, calm after storm.", r:"Doubt, dimming faith, discouragement." },
-
-  { num:18, name:"The Moon", element:"Water", astro:"Pisces", phase:"Uncertainty / Dream",
-    kwU:"illusion; intuition; dreams; uncertainty; subconscious",
-    kwR:"clarity; fear easing; truth emerging; grounding",
-    u:"Intuition, symbolism, the unknown.", r:"Fear dissolving, clarity returning." },
-
-  { num:19, name:"The Sun", element:"Fire", astro:"Sun", phase:"Clarity / Joy",
-    kwU:"success; joy; vitality; confidence; warmth",
-    kwR:"ego; burnout; blocked joy; pessimism; overexposure",
-    u:"Success, warmth, vitality.", r:"Ego, burnout, joy blocked." },
-
-  { num:20, name:"Judgement", element:"Fire", astro:"Pluto", phase:"Awakening / Call",
-    kwU:"awakening; reckoning; rebirth; calling; forgiveness",
-    kwR:"avoidance; self-doubt; refusal; blame; stuck past",
-    u:"Reckoning, rebirth, answering the call.", r:"Avoidance, self-doubt, refusing growth." },
-
-  { num:21, name:"The World", element:"Earth", astro:"Saturn", phase:"Wholeness / Completion",
-    kwU:"completion; integration; mastery; wholeness; closure",
-    kwR:"unfinished business; delays; loose ends; lack of closure",
-    u:"Completion, integration, mastery.", r:"Loose ends, delays, unfinished business." },
-
-  { num:22, name:"The Well", element:"Water", astro:"Moon / Deep Water", phase:"Depth / Source",
-    kwU:"inner source; creativity; renewal; visions; resourcefulness",
-    kwR:"creative drought; emptiness; fear of depth; depletion",
-    u:"Creativity, resourcefulness, soul-searching, visions.", r:"Emptiness, creative drought, fear of the depths." },
-
-  { num:23, name:"The Artist", element:"Air", astro:"Mercury / Inspiration", phase:"Vision / Design",
-    kwU:"inspiration; design; expression; planning; craft",
-    kwR:"perfectionism; restlessness; blocked art; self-critique",
-    u:"Design, planning, cathartic expression, imagination.", r:"Perfectionism, restlessness, blocked expression." },
-];
-
-function buildDecanMap(){
-  return {
-    "Wands": {
-      2:"Mars in Aries", 3:"Sun in Aries", 4:"Venus in Aries",
-      5:"Saturn in Leo", 6:"Jupiter in Leo", 7:"Mars in Leo",
-      8:"Mercury in Sagittarius", 9:"Moon in Sagittarius", 10:"Saturn in Sagittarius",
-    },
-    "Cups": {
-      2:"Venus in Cancer", 3:"Mercury in Cancer", 4:"Moon in Cancer",
-      5:"Mars in Scorpio", 6:"Sun in Scorpio", 7:"Venus in Scorpio",
-      8:"Saturn in Pisces", 9:"Jupiter in Pisces", 10:"Mars in Pisces",
-    },
-    "Swords": {
-      2:"Moon in Libra", 3:"Saturn in Libra", 4:"Jupiter in Libra",
-      5:"Venus in Aquarius", 6:"Mercury in Aquarius", 7:"Moon in Aquarius",
-      8:"Jupiter in Gemini", 9:"Mars in Gemini", 10:"Sun in Gemini",
-    },
-    "Pentacles": {
-      2:"Jupiter in Capricorn", 3:"Mars in Capricorn", 4:"Sun in Capricorn",
-      5:"Mercury in Taurus", 6:"Moon in Taurus", 7:"Saturn in Taurus",
-      8:"Sun in Virgo", 9:"Venus in Virgo", 10:"Mercury in Virgo",
+    function cryptoRandomInt(max) {
+      if (!HAS_CRYPTO) return Math.floor(Math.random() * max);
+      const limit = Math.floor(0x100000000 / max) * max;
+      let x;
+      do {
+        x = crypto.getRandomValues(new Uint32Array(1))[0];
+      } while (x >= limit);
+      return x % max;
     }
-  };
-}
 
-function courtElement(rankName, suitElement){
-  const map = {
-    "Page":   `Earth of ${suitElement}`,
-    "Knight": `Air of ${suitElement}`,
-    "Queen":  `Water of ${suitElement}`,
-    "King":   `Fire of ${suitElement}`,
-  };
-  return map[rankName] || suitElement;
-}
+    function shuffleArray(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = cryptoRandomInt(i + 1);
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
 
-function capitalize(s){ return s ? (s.charAt(0).toUpperCase() + s.slice(1)) : s; }
+    function randomBool() {
+      return HAS_CRYPTO ? (crypto.getRandomValues(new Uint32Array(1))[0] & 1) === 1 : Math.random() < 0.5;
+    }
 
-function composeMeaningU(rank, suit){
-  const base = rank.u;
-  const suitLine = `in the realm of ${suit.theme}`;
-  const spice = rank.court
-    ? `Show up, learn, and let experience teach you.`
-    : `Let it take a clear shape instead of staying a vibe.`;
-  const keywords = `${rank.u.split(";")[0].replace(/\.$/,"")}; ${suit.theme}`;
-  return { keywords, text: `${capitalize(base)} ${suitLine}. ${spice}` };
-}
-function composeMeaningR(rank, suit){
-  const base = rank.r;
-  const suitLine = `shadowed by ${suit.shadow}`;
-  const spice = rank.court
-    ? `Slow down: refine skill, intention, and follow-through.`
-    : `Fix the leak: simplify, choose, and commit.`;
-  const keywords = `${rank.r.split(";")[0].replace(/\.$/,"")}; ${suit.shadow}`;
-  return { keywords, text: `${capitalize(base)} ${suitLine}. ${spice}` };
-}
+    /* =========================================
+       MAJOR ARCANA DATA
+       ========================================= */
+    const MAJORS = [
+      {
+        num: 0, name: "The Fool", glyph: "☄", element: "Air", astro: "Uranus",
+        briefU: "New beginnings, trust, spontaneity",
+        briefR: "Recklessness, naivety, poor timing",
+        coreU: "Moves through life with genuine openness. Not naive in a stupid way—brave. Zero as both nothing and infinite potential.",
+        coreR: "Fear of commitment. Inability to take anything seriously as defense. Keeps starting over because finishing means being judged.",
+        tones: {
+          drama: "The innocent whose worldview will shatter—or refuses to let it",
+          blackComedy: "Cheerfully walks into disasters. 'Fuck it, we ball'",
+          lightComedy: "Chaotic gremlin. Impulsive decisions, hilarious consequences",
+          romance: "Falls hard and fast. Or: commitment-phobic serial dater",
+          action: "Reckless adventurer. Lucky in ways that shouldn't work",
+          horror: "Opens the door. Curiosity as fatal flaw"
+        }
+      },
+      {
+        num: 1, name: "The Magician", glyph: "⟡", element: "Air", astro: "Mercury",
+        briefU: "Skill, focus, manifestation",
+        briefR: "Trickery, scattered energy, manipulation",
+        coreU: "Defined by competence. Makes things work. Will into action, mastery of tools.",
+        coreR: "Manipulation. Using skill to control. Fear that without usefulness, they're nothing. Imposter syndrome despite mastery.",
+        tones: {
+          drama: "Talent versus ethics. What they CAN do versus SHOULD",
+          blackComedy: "Manipulates everyone into corners. Too clever by half",
+          lightComedy: "Overconfident, gets humbled. Or: competent straight man",
+          romance: "Seduction as craft. Or: focused on mastery, forgot feelings",
+          action: "The specialist. Competence porn. Exactly the right skill",
+          horror: "Power corrupts. Or: the only one who can stop it"
+        }
+      },
+      {
+        num: 2, name: "The High Priestess", glyph: "☾", element: "Water", astro: "Moon",
+        briefU: "Intuition, mystery, inner knowing",
+        briefR: "Ignored intuition, hidden motives, confusion",
+        coreU: "Knows more than they say. Operates on instinct. Something beneath the surface.",
+        coreR: "Secrets kept too long. Hiding behind mystique because vulnerability terrifies.",
+        tones: {
+          drama: "Secret that will destroy everything when revealed",
+          blackComedy: "Thinks they're mysterious; everyone sees through them",
+          lightComedy: "Cryptic friend with advice that makes no sense until later",
+          romance: "Enigma you can't stop thinking about. Intimacy as unveiled mystery",
+          action: "The informant. Neutral party with crucial intel",
+          horror: "Cassandra who isn't believed. Or: source of the wrongness"
+        }
+      },
+      {
+        num: 3, name: "The Empress", glyph: "❀", element: "Earth", astro: "Venus",
+        briefU: "Nurture, abundance, creativity",
+        briefR: "Smothering, creative block, neglect",
+        coreU: "Fundamentally generative. Creates life, art, comfort. Abundance radiates.",
+        coreR: "Smothering love. Enabling through 'nurturing.' Hedonism as avoidance.",
+        tones: {
+          drama: "Fertility as central conflict. What they built versus what it cost",
+          blackComedy: "Smothers everyone with love until they're gasping",
+          lightComedy: "Aggressively feeds people. Mom friend to annoying degree",
+          romance: "Sensuality incarnate. Touch-forward. Love through care",
+          action: "The safe haven. What's being protected",
+          horror: "Nature's abundance becomes nature's horror"
+        }
+      },
+      {
+        num: 4, name: "The Emperor", glyph: "⌁", element: "Fire", astro: "Aries",
+        briefU: "Authority, structure, protection",
+        briefR: "Tyranny, rigidity, control issues",
+        coreU: "Defined by authority. Creates order. Protective through structure.",
+        coreR: "Control as love substitute. Tyranny. Fear of chaos masked as preference.",
+        tones: {
+          drama: "Power and corruption. Weight of leadership",
+          blackComedy: "Control freak whose systems make things worse",
+          lightComedy: "Type A disaster. Spreadsheets for vacations",
+          romance: "Dominant energy. Protective to a fault",
+          action: "The commander. Making the calls",
+          horror: "Patriarch whose control hid something"
+        }
+      },
+      {
+        num: 5, name: "The Hierophant", glyph: "⛩", element: "Earth", astro: "Taurus",
+        briefU: "Tradition, values, mentorship",
+        briefR: "Rebellion, hollow rituals, dogma",
+        coreU: "Shaped by tradition—its defender or refugee. Relates through frameworks.",
+        coreR: "Dogma over truth. Following rules because rules. Institutional shame.",
+        tones: {
+          drama: "Faith tested. Tradition versus personal truth",
+          blackComedy: "So conventional it's absurd. Scandalized by everything",
+          lightComedy: "Forced into unconventional situation, copes badly",
+          romance: "'Proper' courtship. Scandalized by own desires",
+          action: "The institution sending the mission",
+          horror: "Cult. Corrupted tradition"
+        }
+      },
+      {
+        num: 6, name: "The Lovers", glyph: "♢", element: "Air", astro: "Gemini",
+        briefU: "Union, alignment, meaningful choice",
+        briefR: "Disharmony, temptation, misalignment",
+        coreU: "Defined by relationships or a defining choice. They are who they chose.",
+        coreR: "Inability to choose. Defining self through partnership. Fear of alone.",
+        tones: {
+          drama: "The choice that changed everything. Partnership under pressure",
+          blackComedy: "Paralyzed by choice. Can't commit to ANYTHING",
+          lightComedy: "Love triangle farce. Romantic mishaps",
+          romance: "THE romance card. Soulmate energy",
+          action: "Partners. The duo. Choosing sides",
+          horror: "Temptation. The choice that damns"
+        }
+      },
+      {
+        num: 7, name: "The Chariot", glyph: "➶", element: "Water", astro: "Cancer",
+        briefU: "Determination, victory, willpower",
+        briefR: "Loss of direction, forcing outcomes",
+        coreU: "Moves by force of will. Conquered something. Determined to stubbornness.",
+        coreR: "Control as armor. Can't stop moving. Running FROM disguised as TO.",
+        tones: {
+          drama: "At what cost victory? Drive that destroys",
+          blackComedy: "Can't stop, won't stop, definitely should stop",
+          lightComedy: "Aggressively determined about something trivial",
+          romance: "Pursuing love with determination. Stubborn devotion",
+          action: "The warrior. Unstoppable. Victory or death",
+          horror: "The pursuit becomes the horror"
+        }
+      },
+      {
+        num: 8, name: "Strength", glyph: "✹", element: "Fire", astro: "Leo",
+        briefU: "Courage, compassion, patience",
+        briefR: "Self-doubt, reactivity, weakness of will",
+        coreU: "Quiet power. Endures. Gentles what's wild—in self or others.",
+        coreR: "Strength for martyrdom. Endless patience enabling bad situations.",
+        tones: {
+          drama: "Endurance tested. Quiet strength versus flashy power",
+          blackComedy: "Infinite patience with disasters. Never snaps, which is worse",
+          lightComedy: "Calm one among chaos. Finally snaps—gently",
+          romance: "Patience in love. Taming or being tamed. Strength to be vulnerable",
+          action: "The one who doesn't flinch",
+          horror: "Enduring the unendurable"
+        }
+      },
+      {
+        num: 9, name: "The Hermit", glyph: "⟣", element: "Earth", astro: "Virgo",
+        briefU: "Introspection, guidance, solitude",
+        briefR: "Isolation, avoidance, loneliness",
+        coreU: "Defined by solitude. Introvert, seeker, withdrew to find themselves.",
+        coreR: "Isolation as defense. Loneliness mistaken for independence.",
+        tones: {
+          drama: "Isolation and its costs. Wisdom of withdrawal versus damage",
+          blackComedy: "Dramatically antisocial. 'I'll be in my cave'",
+          lightComedy: "Introvert dragged into social situations",
+          romance: "Healing in solitude. Or: love that draws them out",
+          action: "The mentor. Wise guide",
+          horror: "What lives alone in the dark"
+        }
+      },
+      {
+        num: 10, name: "Wheel of Fortune", glyph: "⟲", element: "Fire", astro: "Jupiter",
+        briefU: "Cycles, luck, turning points",
+        briefR: "Resistance to change, bad timing",
+        coreU: "In a moment of change. Luck—good or bad—is active. Cycles turning.",
+        coreR: "Fighting inevitable change. Bad timing. Stuck in a loop.",
+        tones: {
+          drama: "Fate intervenes. What goes around comes around",
+          blackComedy: "Chaos agent. Everything they touch spins wildly",
+          lightComedy: "Ridiculously lucky or unlucky—never in between",
+          romance: "Fated meeting. Right place, right time",
+          action: "The twist. Plot changes everything",
+          horror: "You can't escape what's coming"
+        }
+      },
+      {
+        num: 11, name: "Justice", glyph: "⚖", element: "Air", astro: "Libra",
+        briefU: "Fairness, clarity, accountability",
+        briefR: "Bias, dishonesty, avoiding consequences",
+        coreU: "Defined by fairness—or the pursuit of it. Sees truth clearly.",
+        coreR: "Self-righteous. Punitive. Fairness that serves their bias.",
+        tones: {
+          drama: "Reckoning comes. The truth will out",
+          blackComedy: "Technically correct is the best kind of correct",
+          lightComedy: "Pedantic about fairness. 'Actually, that's not how we agreed'",
+          romance: "Love as choice, clear-eyed. Or: scorekeeping in relationships",
+          action: "The trial. The verdict",
+          horror: "Justice without mercy"
+        }
+      },
+      {
+        num: 12, name: "The Hanged Man", glyph: "⟟", element: "Water", astro: "Neptune",
+        briefU: "Pause, perspective shift, surrender",
+        briefR: "Stalling, martyrdom, stuck",
+        coreU: "In suspension. Sacrifice for perspective. Sees differently because of the pause.",
+        coreR: "Martyrdom without purpose. Suffering as identity. Won't let go.",
+        tones: {
+          drama: "What they gave up to understand",
+          blackComedy: "Dramatically suspended. 'I'm PROCESSING'",
+          lightComedy: "Overthinks everything. Paralyzed by perspective",
+          romance: "Waiting. Sacrifice for love",
+          action: "The pause before the reversal",
+          horror: "Trapped. Can't move. Must watch"
+        }
+      },
+      {
+        num: 13, name: "Death", glyph: "✖", element: "Water", astro: "Scorpio",
+        briefU: "Endings, transformation, rebirth",
+        briefR: "Resistance to change, stagnation",
+        coreU: "Something ended. Transformation through loss. Not morbid—necessary.",
+        coreR: "Refusing to let die what needs to die. Clinging to corpses.",
+        tones: {
+          drama: "Transformation that cost everything",
+          blackComedy: "'I've reinvented myself eleven times this year'",
+          lightComedy: "Goth aesthetic, dramatic about minor changes",
+          romance: "Love that transforms completely. Ego death",
+          action: "The ending that enables the beginning",
+          horror: "What refuses to stay dead"
+        }
+      },
+      {
+        num: 14, name: "Temperance", glyph: "☍", element: "Fire", astro: "Sagittarius",
+        briefU: "Balance, moderation, integration",
+        briefR: "Imbalance, excess, poor mixing",
+        coreU: "Defined by balance or search for it. Integrative. Healing through synthesis.",
+        coreR: "Moderation hiding inability to commit. Lukewarm everything.",
+        tones: {
+          drama: "Balance after extremes. Integration of opposing needs",
+          blackComedy: "So moderate it's extreme. Aggressively balanced",
+          lightComedy: "'Let's compromise' while everyone goes feral",
+          romance: "Partnership as balance. Learning to integrate love with life",
+          action: "The diplomat. The healer",
+          horror: "Balance disturbed. Or: only thing holding it together"
+        }
+      },
+      {
+        num: 15, name: "The Devil", glyph: "⛓", element: "Earth", astro: "Capricorn",
+        briefU: "Attachment, temptation, shadow self",
+        briefR: "Breaking chains, liberation, awareness",
+        coreU: "Defined by shadows or addictions. Not evil—bound. Knows what chains them.",
+        coreR: "Breaking free. Facing shadows. Or: sinking deeper into denial.",
+        tones: {
+          drama: "Addiction. The thing that won't let go",
+          blackComedy: "'I know it's destroying me, but have you TRIED it?'",
+          lightComedy: "Guilty pleasures. Trashy TV addiction",
+          romance: "Toxic attraction. Knowing it's wrong, wanting anyway",
+          action: "The deal. The corruption. Temptation that could win",
+          horror: "Actual devil. Or: bondage that damns"
+        }
+      },
+      {
+        num: 16, name: "The Tower", glyph: "⚡", element: "Fire", astro: "Mars",
+        briefU: "Upheaval, revelation, sudden change",
+        briefR: "Avoided disaster, delayed reckoning",
+        coreU: "Survived destruction. Post-catastrophe. Knows what falling feels like.",
+        coreR: "Avoiding necessary destruction. Foundations crumbling but refusing to see.",
+        tones: {
+          drama: "The fall. Destruction that might liberate",
+          blackComedy: "'This is fine' while everything burns",
+          lightComedy: "Everything goes wrong. Chain of catastrophe",
+          romance: "Relationship that destroys old self",
+          action: "The explosion. Catastrophe escaped or caused",
+          horror: "Disaster horror. What's revealed in destruction"
+        }
+      },
+      {
+        num: 17, name: "The Star", glyph: "✦", element: "Air", astro: "Aquarius",
+        briefU: "Hope, inspiration, healing",
+        briefR: "Despair, disconnection, lost faith",
+        coreU: "Defined by hope or its pursuit. Optimistic despite surviving darkness.",
+        coreR: "Hope as denial. Vulnerability exploited. Lost guiding light.",
+        tones: {
+          drama: "Healing journey. Light in darkness",
+          blackComedy: "Relentlessly optimistic about doomed situations",
+          lightComedy: "'Good vibes only' but genuine. Endearing or insufferable",
+          romance: "Healing through love. Vulnerability rewarded",
+          action: "The goal. What's being fought for",
+          horror: "False hope. Light that leads astray"
+        }
+      },
+      {
+        num: 18, name: "The Moon", glyph: "☾", element: "Water", astro: "Pisces",
+        briefU: "Illusion, intuition, the unconscious",
+        briefR: "Confusion clearing, facing fears",
+        coreU: "Lives in uncertain spaces. Dreamy, intuitive, possibly delusional.",
+        coreR: "Illusions believed. Fears that control. Can't tell real from imagined.",
+        tones: {
+          drama: "Mental illness. Reality questioning",
+          blackComedy: "Anxiety as personality. 'What if—' as lifestyle",
+          lightComedy: "Sees threats everywhere. Spooked by nothing",
+          romance: "Dreamy, uncertain love. 'Is this real?'",
+          action: "Unknown territory. Can't trust senses",
+          horror: "THE horror card. What lurks"
+        }
+      },
+      {
+        num: 19, name: "The Sun", glyph: "☀", element: "Fire", astro: "Sun",
+        briefU: "Joy, success, vitality",
+        briefR: "Temporary setback, dimmed joy",
+        coreU: "Fundamentally joyful. Vital, successful, warm. May seem too good to be true.",
+        coreR: "Toxic positivity. Joy as denial. Can't acknowledge shadow.",
+        tones: {
+          drama: "Joy earned. Or: contrast to current darkness",
+          blackComedy: "So sunny it's suspicious",
+          lightComedy: "Sunshine personified. Endearing or insufferable",
+          romance: "Happy ending energy. Summer romance",
+          action: "Victory. The win",
+          horror: "Joy about to be destroyed"
+        }
+      },
+      {
+        num: 20, name: "Judgement", glyph: "⟠", element: "Fire", astro: "Pluto",
+        briefU: "Reckoning, rebirth, calling",
+        briefR: "Self-doubt, avoiding growth, stuck past",
+        coreU: "In a reckoning. Evaluating life, answering call, dealing with past.",
+        coreR: "Self-judgment too harsh. Can't forgive self. Refusing the call.",
+        tones: {
+          drama: "THE reckoning. Past comes due",
+          blackComedy: "Dramatically judges everything. 'Is this what I'm doing with my life?'",
+          lightComedy: "Existential crisis for laughs",
+          romance: "Reckoning with past relationships. 'Am I worthy?'",
+          action: "Consequences. Calling to act",
+          horror: "Judgment you can't escape"
+        }
+      },
+      {
+        num: 21, name: "The World", glyph: "◌", element: "Earth", astro: "Saturn",
+        briefU: "Completion, integration, wholeness",
+        briefR: "Unfinished, delays, lack of closure",
+        coreU: "Someone who achieved something complete. At peace or wondering 'what now?'",
+        coreR: "Completion fear. Perfectionism preventing closure.",
+        tones: {
+          drama: "End of journey. What completion cost",
+          blackComedy: "Has it figured out. Infuriatingly complete",
+          lightComedy: "'My life is sorted' smugness",
+          romance: "'You complete me.' Happy ending achieved",
+          action: "Goal achieved. Mission complete",
+          horror: "Completion that's wrong somehow"
+        }
+      },
+      {
+        num: 22, name: "The Well", glyph: "⬡", element: "Water", astro: "Moon / Deep Water",
+        briefU: "Inner source, creativity, depth",
+        briefR: "Creative drought, emptiness, fear of depth",
+        coreU: "Depth they can access. Internally coherent. Trauma metabolized into wisdom.",
+        coreR: "Depth exists but dangerous, painful, unreachable. Running on fumes.",
+        tones: {
+          drama: "What sustains them when everything else fails",
+          blackComedy: "Dramatically deep. 'My well of sorrow never empties'",
+          lightComedy: "Surprisingly deep person, catches others off guard",
+          romance: "Emotional depth that draws others in",
+          action: "Hidden reserves. Secret resource",
+          horror: "What lives at the bottom of the well"
+        }
+      },
+      {
+        num: 23, name: "The Artist", glyph: "✎", element: "Air", astro: "Mercury / Inspiration",
+        briefU: "Inspiration, authentic expression, craft",
+        briefR: "Creative block, perfectionism, imitation",
+        coreU: "Someone who ACTS. Defines self rather than being defined. Creates meaning from chaos.",
+        coreR: "Being authored, not authoring. Living a life they didn't choose.",
+        tones: {
+          drama: "Art versus life. What creation costs",
+          blackComedy: "Pretentious about their creative process",
+          lightComedy: "Creative chaos. Inspiration strikes at worst times",
+          romance: "Love as muse. Creating for someone",
+          action: "The plan. The design",
+          horror: "Creation that takes on its own life"
+        }
+      }
+    ];
 
-function buildDeck(){
-  const cards = [];
-  const decans = buildDecanMap();
+    /* =========================================
+       MINOR ARCANA DATA - CARD-SPECIFIC TONES
+       ========================================= */
+    const MINOR_CARDS = {
+      wands: {
+        1: { // Ace of Wands
+          briefU: "Spark of passion, new creative fire",
+          briefR: "Blocked inspiration, false start",
+          coreU: "Pure creative potential. The spark before the fire. Passion looking for a target.",
+          coreR: "A match that won't light. Inspiration blocked at the source.",
+          tones: {
+            drama: "The moment everything changed—the idea that started it all",
+            blackComedy: "Has an IDEA. It's probably terrible. They're doing it anyway",
+            lightComedy: "Enthusiastic new hobby that will last exactly two weeks",
+            romance: "First spark of attraction. Chemistry ignites",
+            action: "The call to adventure. Something lights up",
+            horror: "The fire that shouldn't have been started"
+          }
+        },
+        2: { // Two of Wands
+          briefU: "Planning, vision, decision point",
+          briefR: "Fear of the unknown, poor planning",
+          coreU: "Standing at the crossroads with a map. Vision without action yet. Potential paths.",
+          coreR: "Analysis paralysis. Afraid to choose because choosing means losing other options.",
+          tones: {
+            drama: "The choice between safety and ambition",
+            blackComedy: "Elaborate plans for things they'll never actually do",
+            lightComedy: "Dramatically staring at the horizon. Has not left the house",
+            romance: "Wondering if they should make a move",
+            action: "Strategic planning. The map before the journey",
+            horror: "What waits down each path"
+          }
+        },
+        3: { // Three of Wands
+          briefU: "Expansion, progress, watching ships come in",
+          briefR: "Delays, frustration, setbacks",
+          coreU: "Investment paying off. Watching plans unfold. Expansion in progress.",
+          coreR: "Ships that never arrive. Effort expended with no return yet visible.",
+          tones: {
+            drama: "Waiting for results of a gamble",
+            blackComedy: "Smugly waiting for success that isn't coming",
+            lightComedy: "Impatient about results. 'Is it done YET?'",
+            romance: "Watching for signs of reciprocation",
+            action: "Reinforcements incoming. Plans in motion",
+            horror: "What's coming isn't what was expected"
+          }
+        },
+        4: { // Four of Wands
+          briefU: "Celebration, stability, homecoming",
+          briefR: "Tension beneath celebration, unstable foundation",
+          coreU: "Celebration of achievement. Welcome home. Stable foundation for passion.",
+          coreR: "The party that feels wrong. Celebrating prematurely or performatively.",
+          tones: {
+            drama: "The calm before the storm. Joy about to be tested",
+            blackComedy: "Aggressively celebrating mediocre achievements",
+            lightComedy: "Throws a party for any excuse. Found a parking spot? PARTY",
+            romance: "Relationship milestone celebration",
+            action: "Victory lap. Mission success",
+            horror: "The celebration interrupted"
+          }
+        },
+        5: { // Five of Wands
+          briefU: "Competition, conflict, creative friction",
+          briefR: "Avoiding conflict, inner struggle",
+          coreU: "Creative conflict. Competition that sharpens. Friction producing heat.",
+          coreR: "Fighting for the sake of fighting. Conflict that doesn't produce growth.",
+          tones: {
+            drama: "Rivalry that defines them",
+            blackComedy: "Petty fights about nothing. Competitive about EVERYTHING",
+            lightComedy: "Sibling energy. Bickering as bonding",
+            romance: "Flirting through fighting. Rivals-to-lovers energy",
+            action: "THE combat card. The brawl",
+            horror: "Conflict that escalates beyond control"
+          }
+        },
+        6: { // Six of Wands
+          briefU: "Victory, recognition, public success",
+          briefR: "Ego, hollow victory, fear of success",
+          coreU: "Public victory. Recognition earned. Leading the parade.",
+          coreR: "Victory that feels hollow. Recognition for the wrong things. Pride before fall.",
+          tones: {
+            drama: "Fame and its costs",
+            blackComedy: "Insufferable winner. 'I don't want to say I told you so, BUT'",
+            lightComedy: "Dramatically victorious about minor things",
+            romance: "Public display of affection. Showing off the relationship",
+            action: "The hero's welcome. Mission accomplished with witnesses",
+            horror: "What victory cost. What's waiting after the parade"
+          }
+        },
+        7: { // Seven of Wands
+          briefU: "Standing ground, defense, determination",
+          briefR: "Overwhelmed, giving up, paranoia",
+          coreU: "Defending position against all comers. Outnumbered but not outmatched.",
+          coreR: "Defensive about everything. Fighting battles that don't need fighting.",
+          tones: {
+            drama: "Last stand. Will they hold the line?",
+            blackComedy: "Dramatically defensive about minor criticisms",
+            lightComedy: "Overreacts to any challenge. 'YOU COME AT THE KING'",
+            romance: "Defending the relationship. Fighting for love",
+            action: "The defensive battle. Holding position",
+            horror: "They keep coming. Can't hold forever"
+          }
+        },
+        8: { // Eight of Wands
+          briefU: "Swift action, momentum, things in motion",
+          briefR: "Delays, scattered energy, too fast",
+          coreU: "Everything happening at once. Momentum carrying forward. Speed.",
+          coreR: "Moving too fast to steer. Scattered in all directions.",
+          tones: {
+            drama: "Events spiraling beyond control",
+            blackComedy: "Chaotic energy. Everything happens at once and it's a LOT",
+            lightComedy: "Busy busy busy! No time to think!",
+            romance: "Whirlwind romance. Moving fast",
+            action: "THE action-is-happening card. Go go go",
+            horror: "Can't stop what's coming. It's already in motion"
+          }
+        },
+        9: { // Nine of Wands
+          briefU: "Resilience, persistence, last push",
+          briefR: "Exhaustion, paranoia, stubbornness",
+          coreU: "Battered but not beaten. One more push. Resilience through exhaustion.",
+          coreR: "Too tired to keep going but too stubborn to stop.",
+          tones: {
+            drama: "How much more can they take?",
+            blackComedy: "'I'm FINE' (is absolutely not fine)",
+            lightComedy: "Dramatically exhausted. Has done minimal work",
+            romance: "Fighting for a relationship that's worn them down",
+            action: "The wounded warrior. One more round",
+            horror: "Endurance horror. How long until they break?"
+          }
+        },
+        10: { // Ten of Wands
+          briefU: "Burden, responsibility, heavy load",
+          briefR: "Delegation, release, burnout",
+          coreU: "Carrying too much. Success became burden. Responsible for everything.",
+          coreR: "Finally putting it down. Or: crushed by refusal to let go.",
+          tones: {
+            drama: "The weight of responsibility",
+            blackComedy: "Martyr complex. 'I GUESS I'LL DO EVERYTHING MYSELF'",
+            lightComedy: "Comically overburdened. Can't say no",
+            romance: "Relationship as obligation. Love as duty",
+            action: "The mission that's become too big",
+            horror: "What happens when they finally collapse"
+          }
+        },
+        11: { // Page of Wands
+          briefU: "Enthusiasm, exploration, new passion",
+          briefR: "Recklessness, lack of direction, hype without follow-through",
+          coreU: "Young fire. Enthusiastic explorer. Learning through doing.",
+          coreR: "All spark, no follow-through. Enthusiasm without discipline.",
+          tones: {
+            drama: "Youth and ambition. Too eager to be careful",
+            blackComedy: "ADHD energy. Excited about everything for five minutes",
+            lightComedy: "Puppy energy. Chaotic enthusiasm",
+            romance: "Crush energy. Eager, awkward, endearing",
+            action: "The eager recruit. Young adventurer",
+            horror: "Curiosity that leads somewhere dark"
+          }
+        },
+        12: { // Knight of Wands
+          briefU: "Adventure, pursuit, passionate action",
+          briefR: "Recklessness, scattered focus, burnout",
+          coreU: "Charging forward. Action without hesitation. Passionate pursuit.",
+          coreR: "Charging without direction. Burning out through recklessness.",
+          tones: {
+            drama: "The hothead. Passion that might destroy them",
+            blackComedy: "Dramatic entrances. Zero chill. Full send always",
+            lightComedy: "Dramatically intense about everything",
+            romance: "The pursuer. Passionate, impulsive, can't wait",
+            action: "THE action character. Charge first, plan never",
+            horror: "Recklessness has consequences"
+          }
+        },
+        13: { // Queen of Wands
+          briefU: "Confidence, warmth, magnetic presence",
+          briefR: "Jealousy, demanding, burnt out",
+          coreU: "Confident fire. Warmth that draws people in. Knows their power.",
+          coreR: "Fire turned inward. Demanding attention. Burning those who get close.",
+          tones: {
+            drama: "Power and charisma. What they do with it",
+            blackComedy: "Main character energy taken too literally",
+            lightComedy: "Dramatic queen. Everything is a performance",
+            romance: "Confident seduction. Knows what they want",
+            action: "The charismatic leader. Inspires through presence",
+            horror: "Magnetism that traps. Fire that consumes"
+          }
+        },
+        14: { // King of Wands
+          briefU: "Leadership, vision, entrepreneurial spirit",
+          briefR: "Tyranny, impulsiveness, arrogance",
+          coreU: "Visionary leader. Makes things happen. Commands through inspiration.",
+          coreR: "Visionary turned tyrant. My way or fire.",
+          tones: {
+            drama: "The leader and the cost of command",
+            blackComedy: "Big ideas, questionable execution. 'TRUST THE VISION'",
+            lightComedy: "Entrepreneur energy. Has seventeen side hustles",
+            romance: "Dominant partner. Passionate, possessive",
+            action: "The commander. Leading from the front",
+            horror: "Leadership become obsession"
+          }
+        }
+      },
+      cups: {
+        1: { // Ace of Cups
+          briefU: "New love, emotional beginning, intuition",
+          briefR: "Blocked emotions, self-love needed",
+          coreU: "The cup overflows. New emotional beginning. Love available.",
+          coreR: "Cup cracked at the bottom. Emotions blocked at the source.",
+          tones: {
+            drama: "The moment love begins. Or: love offered, fate unknown",
+            blackComedy: "Suddenly has FEELINGS. Doesn't know what to do with them",
+            lightComedy: "Overwhelmed by emotion. Crying at commercials",
+            romance: "THE new love card. Beginning of something",
+            action: "The emotional stakes become clear",
+            horror: "Love that shouldn't have awakened"
+          }
+        },
+        2: { // Two of Cups
+          briefU: "Partnership, connection, mutual attraction",
+          briefR: "Imbalance, broken connection, self-love",
+          coreU: "Two becoming one. Partnership. Mutual recognition.",
+          coreR: "Partnership out of balance. Connection broken or one-sided.",
+          tones: {
+            drama: "Partnership tested. Will the bond hold?",
+            blackComedy: "So in sync it's annoying. Finishing each other's sentences",
+            lightComedy: "Meet-cute energy. The obvious pair",
+            romance: "THE partnership card. Soulmate vibes",
+            action: "The dynamic duo. Partners",
+            horror: "Connection that binds too tightly"
+          }
+        },
+        3: { // Three of Cups
+          briefU: "Celebration, friendship, community",
+          briefR: "Overindulgence, gossip, isolation",
+          coreU: "Joy shared. Friendship celebrated. Community.",
+          coreR: "Friends who enable bad behavior. Or: isolation from community.",
+          tones: {
+            drama: "Friendship under pressure",
+            blackComedy: "Drunk brunch energy. Messy group dynamics",
+            lightComedy: "THE friend group card. Squad goals",
+            romance: "Love discovered in friendship. Or: throuple energy",
+            action: "The crew. The team celebration",
+            horror: "The coven. What friends do in secret"
+          }
+        },
+        4: { // Four of Cups
+          briefU: "Apathy, contemplation, discontent",
+          briefR: "New awareness, motivation returns",
+          coreU: "Bored with what's offered. Looking inward instead of out. Discontent.",
+          coreR: "Finally seeing the opportunity. Waking up.",
+          tones: {
+            drama: "Depression. The thing they can't want anymore",
+            blackComedy: "'No thank you, I'm full' (of ennui)",
+            lightComedy: "Dramatically unimpressed. Seen it all",
+            romance: "Taking love for granted. Missing what's right there",
+            action: "Refusing the call. Apathy as obstacle",
+            horror: "What they're missing while looking inward"
+          }
+        },
+        5: { // Five of Cups
+          briefU: "Loss, grief, regret",
+          briefR: "Acceptance, moving on, finding hope",
+          coreU: "Mourning what spilled. Focused on loss, missing what remains.",
+          coreR: "Turning around. Seeing the cups still standing.",
+          tones: {
+            drama: "THE grief card. Loss and its aftermath",
+            blackComedy: "Dramatically mourning minor inconveniences",
+            lightComedy: "Emo phase. 'You wouldn't understand my pain'",
+            romance: "Heartbreak. The one that got away",
+            action: "The emotional low point. What was lost",
+            horror: "What was in those cups. Why they spilled"
+          }
+        },
+        6: { // Six of Cups
+          briefU: "Nostalgia, innocence, childhood memories",
+          briefR: "Stuck in past, idealization, outgrowing",
+          coreU: "Return to innocence. Nostalgia. Gifts from the past.",
+          coreR: "Living in memories. Can't grow up. Idealizing what wasn't perfect.",
+          tones: {
+            drama: "The past returns. Childhood wounds or gifts",
+            blackComedy: "Aggressively nostalgic. 'Things were better in MY day'",
+            lightComedy: "Childhood friend reunion. Remember when?",
+            romance: "Childhood sweetheart. First love returns",
+            action: "The past catches up. Old debts",
+            horror: "Innocence wasn't innocent. What really happened"
+          }
+        },
+        7: { // Seven of Cups
+          briefU: "Fantasy, choices, illusion",
+          briefR: "Clarity, focus, reality check",
+          coreU: "Too many dreams. Fantasy versus reality. Paralyzed by possibility.",
+          coreR: "Fantasies dissolving. Seeing clearly. Or: choosing the wrong dream.",
+          tones: {
+            drama: "Which dream to chase? All of them false?",
+            blackComedy: "Elaborate fantasies about things they'll never do",
+            lightComedy: "Head in the clouds. Daydreamer energy",
+            romance: "Idealizing a partner. Fantasy versus real person",
+            action: "The temptations. The distractions from the mission",
+            horror: "Dreams that aren't dreams. Which one is real?"
+          }
+        },
+        8: { // Eight of Cups
+          briefU: "Walking away, seeking more, spiritual journey",
+          briefR: "Fear of change, staying too long",
+          coreU: "Leaving what was built. Seeking something more. The walk away.",
+          coreR: "Afraid to leave. Staying past the expiration date.",
+          tones: {
+            drama: "THE leaving card. The choice to go",
+            blackComedy: "Dramatically walking away from things that aren't that deep",
+            lightComedy: "Wanderlust. Can't stay anywhere",
+            romance: "Leaving a relationship for something unknown",
+            action: "The departure. Going alone",
+            horror: "What they're walking toward"
+          }
+        },
+        9: { // Nine of Cups
+          briefU: "Satisfaction, wishes fulfilled, contentment",
+          briefR: "Dissatisfaction, wanting more, smugness",
+          coreU: "The wish card. Satisfaction achieved. Content with cup full.",
+          coreR: "Got what they wanted and it's not enough. Or: smug satisfaction.",
+          tones: {
+            drama: "Wish fulfilled—now what?",
+            blackComedy: "Smug about getting what they wanted. Insufferable",
+            lightComedy: "Self-satisfied. Treated themselves",
+            romance: "Dream relationship achieved",
+            action: "Goal achieved. Was it worth it?",
+            horror: "Be careful what you wish for"
+          }
+        },
+        10: { // Ten of Cups
+          briefU: "Harmony, family, emotional fulfillment",
+          briefR: "Broken family, unrealistic expectations",
+          coreU: "The happy ending. Family. Emotional completion.",
+          coreR: "Perfect family image hiding dysfunction. Or: reaching for unrealistic happiness.",
+          tones: {
+            drama: "Is the happy ending real? Can it last?",
+            blackComedy: "Aggressively happy family. Suspiciously perfect",
+            lightComedy: "Found family energy. Chaotic but loving",
+            romance: "The happily ever after. Relationship endgame",
+            action: "What's being fought for. Home and family",
+            horror: "The perfect family is wrong"
+          }
+        },
+        11: { // Page of Cups
+          briefU: "Creative message, intuition, dreamy youth",
+          briefR: "Creative block, emotional immaturity",
+          coreU: "Young heart. Creative messenger. Emotionally curious.",
+          coreR: "Emotional immaturity. Imagination without grounding.",
+          tones: {
+            drama: "The dreamer. Sensitivity as strength and vulnerability",
+            blackComedy: "Manic pixie energy. Exhaustingly whimsical",
+            lightComedy: "Artsy kid. Wrote you a poem about their feelings",
+            romance: "Sweet and awkward. First love energy",
+            action: "The creative one. Sees things others miss",
+            horror: "Imaginary friend that isn't imaginary"
+          }
+        },
+        12: { // Knight of Cups
+          briefU: "Romance, charm, following the heart",
+          briefR: "Moodiness, unrealistic, all talk",
+          coreU: "The romantic. Following the heart. Charm as weapon.",
+          coreR: "Romance as performance. Moody, unreliable, all gesture no substance.",
+          tones: {
+            drama: "The romantic idealist. Will reality crush them?",
+            blackComedy: "Dramatically romantic. Wrote you a song, it's not good",
+            lightComedy: "Hopeless romantic. Falls in love weekly",
+            romance: "THE romance character. The pursuer of hearts",
+            action: "Quest for love or beauty. The emotional motivation",
+            horror: "The seducer. Charm that masks something"
+          }
+        },
+        13: { // Queen of Cups
+          briefU: "Emotional depth, intuition, compassion",
+          briefR: "Emotional manipulation, drowning in feelings",
+          coreU: "Deep emotional waters. Intuitive, compassionate, holds space.",
+          coreR: "Drowning in feelings. Emotional manipulation through care.",
+          tones: {
+            drama: "The depth they carry. What the compassion costs",
+            blackComedy: "Feels EVERYTHING. Emotional sponge. Exhausting",
+            lightComedy: "Therapist friend. Everyone tells them everything",
+            romance: "Deep emotional connection. The one who really sees you",
+            action: "The empath. Understands what others need",
+            horror: "Drowning in the emotional depths"
+          }
+        },
+        14: { // King of Cups
+          briefU: "Emotional balance, diplomacy, calm authority",
+          briefR: "Emotional repression, manipulation",
+          coreU: "Mastery of emotions. Calm waters. Diplomatic authority.",
+          coreR: "Emotions locked down. Calm surface over turbulent depths.",
+          tones: {
+            drama: "The controlled one. What's under the surface?",
+            blackComedy: "Too calm. Unsettlingly zen. 'I'm not mad, I'm disappointed'",
+            lightComedy: "The reasonable one in chaos. Designated adult",
+            romance: "Stable partner. Emotionally available—or is he?",
+            action: "The diplomat. The negotiator",
+            horror: "What he's keeping contained"
+          }
+        }
+      },
+      swords: {
+        1: { // Ace of Swords
+          briefU: "Clarity, breakthrough, new idea",
+          briefR: "Confusion, miscommunication, harsh truth",
+          coreU: "The cut through confusion. Mental clarity. New understanding.",
+          coreR: "Mind clouded. The truth cuts but can't be grasped.",
+          tones: {
+            drama: "The moment of clarity. Truth revealed",
+            blackComedy: "Has a REVELATION. It's obvious to everyone else",
+            lightComedy: "Dramatically announces what everyone knew",
+            romance: "The moment attraction becomes clear. Or: harsh truth about love",
+            action: "The breakthrough. The key insight",
+            horror: "The truth that cuts too deep"
+          }
+        },
+        2: { // Two of Swords
+          briefU: "Difficult choice, avoidance, stalemate",
+          briefR: "Decision made, information revealed",
+          coreU: "Blindfolded at crossroads. Refusing to choose. Mental stalemate.",
+          coreR: "Blindfold coming off. The choice becomes clear—or was made badly.",
+          tones: {
+            drama: "The choice they can't make. Paralysis",
+            blackComedy: "'If I don't acknowledge it, it doesn't exist'",
+            lightComedy: "Aggressively avoiding decisions. 'Let's table this'",
+            romance: "Torn between options. Can't choose",
+            action: "The stalemate. No clear path forward",
+            horror: "What they refuse to see"
+          }
+        },
+        3: { // Three of Swords
+          briefU: "Heartbreak, sorrow, painful truth",
+          briefR: "Healing, recovery, releasing pain",
+          coreU: "THE heartbreak card. Pain that clarifies. Sorrow.",
+          coreR: "Pulling the swords out. Healing begins. Or: reopening wounds.",
+          tones: {
+            drama: "Heartbreak central. The wound that defines",
+            blackComedy: "'I collect emotional damage like Pokémon cards'",
+            lightComedy: "Dramatically heartbroken about minor things",
+            romance: "THE betrayal/heartbreak card. Love that hurt",
+            action: "The emotional wound that drives them",
+            horror: "Pain that won't end"
+          }
+        },
+        4: { // Four of Swords
+          briefU: "Rest, recovery, retreat",
+          briefR: "Restlessness, burnout, forced activity",
+          coreU: "Enforced rest. Recovery time. Mental retreat.",
+          coreR: "Can't rest. Or: rest that's become avoidance.",
+          tones: {
+            drama: "The necessary pause. Recovery before what's next",
+            blackComedy: "Dramatically needs a break. Has done nothing",
+            lightComedy: "Self-care as personality. 'I'm recharging'",
+            romance: "Relationship pause. Space needed",
+            action: "The calm before the storm. Recovery period",
+            horror: "The stillness isn't restful"
+          }
+        },
+        5: { // Five of Swords
+          briefU: "Conflict, defeat, hollow victory",
+          briefR: "Reconciliation, moving on, letting go",
+          coreU: "Victory that cost too much. Conflict with no real winner.",
+          coreR: "Walking away from the fight. Or: defeated and choosing peace.",
+          tones: {
+            drama: "The fight that everyone lost",
+            blackComedy: "'I won the argument but at what cost' (they know exactly what cost)",
+            lightComedy: "Petty victories celebrated. Technically correct counts",
+            romance: "Fight that damaged the relationship",
+            action: "The battle that shouldn't have been fought",
+            horror: "What was done to win"
+          }
+        },
+        6: { // Six of Swords
+          briefU: "Transition, moving on, calmer waters",
+          briefR: "Stuck, resistance to change, unfinished business",
+          coreU: "The boat across troubled waters. Leaving difficulty behind. Transition.",
+          coreR: "Can't leave. The baggage follows.",
+          tones: {
+            drama: "The departure. What's left behind",
+            blackComedy: "Dramatically leaving. 'I can never return' (is going to Target)",
+            lightComedy: "Moving on from minor inconveniences like they're exile",
+            romance: "Leaving a relationship or situation for calmer shores",
+            action: "The escape. The transition",
+            horror: "What follows across the water"
+          }
+        },
+        7: { // Seven of Swords
+          briefU: "Strategy, stealth, getting away with something",
+          briefR: "Conscience, getting caught, coming clean",
+          coreU: "The heist. Sneaking away with what's wanted. Strategy that bends rules.",
+          coreR: "Getting caught. Or: choosing not to deceive.",
+          tones: {
+            drama: "The deception. Will they get away with it?",
+            blackComedy: "Sneaky. Thinks they're clever. Everyone can see",
+            lightComedy: "Elaborate schemes for minor things",
+            romance: "Secret relationship. Or: lies in love",
+            action: "THE heist/stealth card. The clever plan",
+            horror: "What they're really stealing"
+          }
+        },
+        8: { // Eight of Swords
+          briefU: "Restriction, victim mentality, feeling trapped",
+          briefR: "Freedom, releasing limitations, clarity",
+          coreU: "Trapped by thoughts. The cage is mental. Victim of own thinking.",
+          coreR: "Realizing the bindings are loose. Mental freedom.",
+          tones: {
+            drama: "Trapped by circumstance—or by belief?",
+            blackComedy: "Dramatically trapped. The door is unlocked",
+            lightComedy: "Creates own problems then complains about them",
+            romance: "Feeling trapped in or by love",
+            action: "The capture. The imprisonment",
+            horror: "Can't move. Can't escape. Or can they?"
+          }
+        },
+        9: { // Nine of Swords
+          briefU: "Anxiety, nightmares, despair",
+          briefR: "Hope, reaching out, worst is over",
+          coreU: "THE anxiety card. 3am thoughts. Nightmares.",
+          coreR: "The dawn comes. Anxiety peaking before release.",
+          tones: {
+            drama: "Mental anguish. The dark night of the soul",
+            blackComedy: "'What if—' anxiety spiral played for laughs",
+            lightComedy: "Catastrophizes everything. Minor problem? DISASTER",
+            romance: "Relationship anxiety. What if they don't love me",
+            action: "The low point. Despair before action",
+            horror: "THE nightmare card. What won't let them sleep"
+          }
+        },
+        10: { // Ten of Swords
+          briefU: "Rock bottom, endings, betrayal",
+          briefR: "Recovery, rising again, worst is over",
+          coreU: "THE rock bottom card. Utterly defeated. Can only go up.",
+          coreR: "Standing up. It's over. Rebuilding begins.",
+          tones: {
+            drama: "Total defeat. The end of everything",
+            blackComedy: "So dramatic about being done. 'I am DESTROYED' (minor inconvenience)",
+            lightComedy: "Face-down in the mud. Everything went wrong",
+            romance: "Complete heartbreak. Relationship ended badly",
+            action: "The defeat. The fall. Rock bottom",
+            horror: "The betrayal complete. Nothing left"
+          }
+        },
+        11: { // Page of Swords
+          briefU: "Curiosity, mental agility, vigilance",
+          briefR: "Gossip, deception, scattered thoughts",
+          coreU: "Sharp young mind. Curious, watching, learning. Quick but untested.",
+          coreR: "Gossip and rumor. Too clever, not wise.",
+          tones: {
+            drama: "The watcher. Sees too much, understands too little",
+            blackComedy: "Knows everyone's business. Lives for drama",
+            lightComedy: "Nosy. Into everyone's business 'for research'",
+            romance: "Overanalyzes relationships. Asks too many questions",
+            action: "The scout. The spy-in-training",
+            horror: "What they've been watching"
+          }
+        },
+        12: { // Knight of Swords
+          briefU: "Ambition, action, charging forward",
+          briefR: "Recklessness, scattered, aggressive",
+          coreU: "Mental force charging forward. Ambitious, driven, won't stop.",
+          coreR: "Sharp and careless. Cuts through without checking what.",
+          tones: {
+            drama: "Ambition that won't be denied. Reckless charge",
+            blackComedy: "No thoughts, just aggression. Charges into walls",
+            lightComedy: "Responds to everything with maximum intensity",
+            romance: "Aggressive pursuit. Debate as foreplay",
+            action: "THE charge card. Direct assault",
+            horror: "What they're charging toward"
+          }
+        },
+        13: { // Queen of Swords
+          briefU: "Clear boundaries, independence, truth-teller",
+          briefR: "Coldness, bitterness, cruelty",
+          coreU: "Sharp and clear. Boundaries like blades. Sees through pretense.",
+          coreR: "Cold from pain. Cruelty as protection. Isolated by sharpness.",
+          tones: {
+            drama: "The truth-teller no one wants to hear",
+            blackComedy: "Brutally honest. 'I'm just being real' (devastating)",
+            lightComedy: "Has no filter. Says what everyone's thinking",
+            romance: "Guarded heart. Hard to reach but worth it",
+            action: "The strategist. Cold calculation",
+            horror: "What made her this sharp"
+          }
+        },
+        14: { // King of Swords
+          briefU: "Authority, truth, intellectual power",
+          briefR: "Tyranny, manipulation, cold cruelty",
+          coreU: "Mental authority. Judges fairly but coldly. Truth over comfort.",
+          coreR: "Authority weaponized. Mind used for control.",
+          tones: {
+            drama: "The judge. Fair but harsh",
+            blackComedy: "'I don't make the rules' (absolutely does make the rules)",
+            lightComedy: "Lawyer energy. Technically correct about everything",
+            romance: "Intimidating partner. Intellectually dominant",
+            action: "The commander. Strategic mind",
+            horror: "Cold authority. No appeal"
+          }
+        }
+      },
+      pentacles: {
+        1: { // Ace of Pentacles
+          briefU: "New opportunity, prosperity, manifestation",
+          briefR: "Missed opportunity, poor planning",
+          coreU: "The golden opportunity. Material beginning. Seeds of prosperity.",
+          coreR: "Opportunity slipping through fingers. Material beginning that won't take.",
+          tones: {
+            drama: "The chance that could change everything",
+            blackComedy: "Has a PLAN. It's going to make money. (It won't)",
+            lightComedy: "Business idea! Startup! (Has not considered details)",
+            romance: "Relationship with real potential",
+            action: "The resources appear. The opportunity",
+            horror: "The golden opportunity with strings"
+          }
+        },
+        2: { // Two of Pentacles
+          briefU: "Balance, juggling, adaptability",
+          briefR: "Imbalance, overwhelm, dropping balls",
+          coreU: "Juggling multiple demands. Balance through motion. Adaptable.",
+          coreR: "Balls dropping. Can't keep everything in the air.",
+          tones: {
+            drama: "The balance can't hold",
+            blackComedy: "Juggling chaos, somehow not dead yet",
+            lightComedy: "Busy! Managing! 'I have a SYSTEM' (barely)",
+            romance: "Balancing relationship with everything else",
+            action: "Managing multiple demands. Keeping it together",
+            horror: "What happens when the juggling stops"
+          }
+        },
+        3: { // Three of Pentacles
+          briefU: "Collaboration, skill, teamwork",
+          briefR: "Conflict at work, lack of teamwork",
+          coreU: "Working together well. Skills combined. Craftsmanship recognized.",
+          coreR: "Team dysfunction. Skills not valued. Working at cross purposes.",
+          tones: {
+            drama: "The collaboration tested",
+            blackComedy: "Group project where one person does everything",
+            lightComedy: "Team dynamics. 'Let's circle back'",
+            romance: "Building something together",
+            action: "The team assembles. Skills combined",
+            horror: "What they're building together"
+          }
+        },
+        4: { // Four of Pentacles
+          briefU: "Security, conservation, holding on",
+          briefR: "Greed, hoarding, letting go",
+          coreU: "Holding tight to what's earned. Security through control. Protective of resources.",
+          coreR: "Hoarding. Greed. Or: finally releasing grip.",
+          tones: {
+            drama: "What they won't let go of, and why",
+            blackComedy: "MINE. Aggressively possessive. Won't share",
+            lightComedy: "Frugal to the point of absurdity. Reuses teabags",
+            romance: "Possessive partner. Or: afraid to invest emotionally",
+            action: "Protecting resources. What they're guarding",
+            horror: "What they're sitting on"
+          }
+        },
+        5: { // Five of Pentacles
+          briefU: "Hardship, isolation, financial loss",
+          briefR: "Recovery, help available, spiritual wealth",
+          coreU: "Out in the cold. Material hardship. Isolated from help.",
+          coreR: "Help is available if they'd look up. Recovery beginning.",
+          tones: {
+            drama: "Poverty and its costs. What hardship does to people",
+            blackComedy: "Broke and dramatic about it. 'I simply cannot'",
+            lightComedy: "Ramen budget. Treats themselves to name-brand once a year",
+            romance: "Love in hard times. Or: relationship struggling under pressure",
+            action: "The low point. Resources gone",
+            horror: "The cold and dark outside the warm light"
+          }
+        },
+        6: { // Six of Pentacles
+          briefU: "Generosity, giving and receiving, charity",
+          briefR: "Strings attached, debt, imbalance",
+          coreU: "Give and take. Generosity. Balance of resources flowing.",
+          coreR: "Generosity with strings. Power imbalance in giving.",
+          tones: {
+            drama: "The dynamics of who gives and who receives",
+            blackComedy: "Performative generosity. Makes sure everyone knows",
+            lightComedy: "Venmo-ing people for $3. 'I got you last time'",
+            romance: "Giving in relationship. Is it equal?",
+            action: "Resources shared. Allies with means",
+            horror: "The cost of taking the gift"
+          }
+        },
+        7: { // Seven of Pentacles
+          briefU: "Assessment, patience, long-term investment",
+          briefR: "Impatience, poor results, wasted effort",
+          coreU: "Watching the garden grow. Long-term investment. Patience for harvest.",
+          coreR: "Impatient for results. Doubting the investment.",
+          tones: {
+            drama: "Has the investment paid off?",
+            blackComedy: "'Any day now' (has been saying this for years)",
+            lightComedy: "Checks on progress constantly. 'Is it working yet?'",
+            romance: "Long-term relationship. Is this still growing?",
+            action: "Waiting for the plan to work",
+            horror: "What's actually growing"
+          }
+        },
+        8: { // Eight of Pentacles
+          briefU: "Craftsmanship, skill development, dedication",
+          briefR: "Perfectionism, shortcuts, dead-end work",
+          coreU: "Mastering the craft. Dedication to skill. Work that matters.",
+          coreR: "Perfection blocking completion. Or: soul-crushing repetition.",
+          tones: {
+            drama: "The cost of mastery",
+            blackComedy: "Grinding forever. 'Just need 10,000 more hours'",
+            lightComedy: "Hyperfocused on craft. Forgot to eat",
+            romance: "Working on relationship skills. Or: working instead of connecting",
+            action: "Training montage. Skill development",
+            horror: "The work that never ends"
+          }
+        },
+        9: { // Nine of Pentacles
+          briefU: "Independence, luxury, self-sufficiency",
+          briefR: "Superficiality, overwork, lonely success",
+          coreU: "Self-made success. Luxury earned. Independent abundance.",
+          coreR: "Success but alone. Luxury that doesn't satisfy.",
+          tones: {
+            drama: "What success cost. Luxury and its loneliness",
+            blackComedy: "Treats themselves. Aggressively self-sufficient",
+            lightComedy: "Bougie solo life. 'I don't NEED anyone'",
+            romance: "Happy alone—but is there room for someone?",
+            action: "Resources secured. Self-sufficient",
+            horror: "Alone with all the money. What's the point?"
+          }
+        },
+        10: { // Ten of Pentacles
+          briefU: "Legacy, family wealth, long-term success",
+          briefR: "Family conflict, squandered inheritance",
+          coreU: "Generational wealth. Family legacy. Success that spans time.",
+          coreR: "Family fighting over inheritance. Legacy corrupted.",
+          tones: {
+            drama: "The family fortune and its complications",
+            blackComedy: "Old money drama. 'We don't TALK about the inheritance'",
+            lightComedy: "Family business chaos. Too many cooks",
+            romance: "Relationship meets family wealth. Complications ensue",
+            action: "The resources of generations. Old power",
+            horror: "What the family built on"
+          }
+        },
+        11: { // Page of Pentacles
+          briefU: "New opportunity, studiousness, practical beginnings",
+          briefR: "Lack of progress, procrastination",
+          coreU: "Young and practical. Learning a trade. Opportunity through diligence.",
+          coreR: "Procrastinating on practical matters. Plans without action.",
+          tones: {
+            drama: "The student. Beginning the long work",
+            blackComedy: "Has a five-year plan. Has had it for seven years",
+            lightComedy: "Research phase forever. Actually doing it? Eventually",
+            romance: "Studious about love. Reading relationship advice",
+            action: "The apprentice. Learning the craft",
+            horror: "What they're studying"
+          }
+        },
+        12: { // Knight of Pentacles
+          briefU: "Hard work, reliability, methodical progress",
+          briefR: "Stubbornness, boredom, workaholism",
+          coreU: "Slow and steady. Reliable progress. Will get there eventually.",
+          coreR: "Stuck in routine. Reliable to a fault. Boring.",
+          tones: {
+            drama: "The grind. Dedication versus obsession",
+            blackComedy: "The most boring person. Reliable, but GOD",
+            lightComedy: "Has a schedule. Follows it. EXACTLY",
+            romance: "Steady partner. Reliable, not exciting",
+            action: "The reliable one. Shows up, does the work",
+            horror: "The routine hides something"
+          }
+        },
+        13: { // Queen of Pentacles
+          briefU: "Nurturing abundance, practical care, home-making",
+          briefR: "Self-neglect, smothering, money worries",
+          coreU: "Nurturing through practical means. The home is abundant. Takes care.",
+          coreR: "Takes care of everyone but self. Or: nurturing becomes controlling.",
+          tones: {
+            drama: "The caretaker and the cost of care",
+            blackComedy: "Mom friend. Has snacks. Will feed you whether you want it or not",
+            lightComedy: "Homemaker energy. Knows where everything is",
+            romance: "Partner who makes house into home",
+            action: "The support. The safe base",
+            horror: "What the care is hiding"
+          }
+        },
+        14: { // King of Pentacles
+          briefU: "Wealth, success, material mastery",
+          briefR: "Greed, materialism, stubbornness",
+          coreU: "Material mastery. Wealth achieved. Stable authority.",
+          coreR: "Greed. Money is god. Or: wealth without soul.",
+          tones: {
+            drama: "The wealthy one and money's complications",
+            blackComedy: "'Money can't buy happiness but' (absolutely thinks it can)",
+            lightComedy: "Rich guy energy. Solves problems by throwing money",
+            romance: "Wealthy partner. What does love mean when they can buy anything?",
+            action: "The resource. The wealthy patron",
+            horror: "What the wealth was built on"
+          }
+        }
+      }
+    };
 
-  // Majors
-  for (const m of MAJORS){
-    cards.push({
-      id: `MA-${m.num}`,
-      arcana: "Major",
-      number: m.num,
-      name: m.name,
-      suit: null,
-      element: m.element,
-      astrology: m.astro,
-      phase: m.phase,
-      keywordsU: m.kwU,
-      keywordsR: m.kwR,
-      meaningU: m.u,
-      meaningR: m.r,
-      glyph: "✦",
-    });
-  }
+    /* =========================================
+       POSITION INTERPRETATION ANGLES
+       ========================================= */
+    const POSITIONS = {
+      general: {
+        name: "General Draw",
+        hint: null,
+        angle: null
+      },
+      identity: {
+        name: "Core Identity",
+        hint: "Who they fundamentally ARE at their core",
+        angle: "As their soul, this card suggests someone who"
+      },
+      personality: {
+        name: "Personality",
+        hint: "How that identity expresses in daily life",
+        angle: "In daily expression, this manifests as"
+      },
+      motivation: {
+        name: "Motivation",
+        hint: "What drives them, what they're chasing",
+        angle: "As their driving force, they're compelled to"
+      },
+      shadow: {
+        name: "Shadow / Conflict",
+        hint: "What they hide, deny, or struggle against",
+        angle: "In their shadow, they hide or struggle with"
+      },
+      fears: {
+        name: "Fears",
+        hint: "What keeps them up at night, their vulnerabilities",
+        angle: "At 3am, they're haunted by"
+      },
+      backstory: {
+        name: "Backstory",
+        hint: "Something formative from their past",
+        angle: "Something formative happened involving"
+      },
+      relationship: {
+        name: "Relationship Dynamic",
+        hint: "How they connect with others by default",
+        angle: "In relationships, their default pattern is"
+      },
+      appearance: {
+        name: "Appearance",
+        hint: "Physical presence, aesthetic, how they present",
+        angle: "Physically, this energy manifests as"
+      },
+      skills: {
+        name: "Skills / Abilities",
+        hint: "What they're good at, their competencies",
+        angle: "Their competence shows in"
+      },
+      setting: {
+        name: "Setting / Era",
+        hint: "When and where—let the card push you somewhere unexpected",
+        angle: "This suggests a world of"
+      },
+      genre: {
+        name: "Genre Energy",
+        hint: "What kind of story this is",
+        angle: "The story has the energy of"
+      },
+      tone: {
+        name: "Tone / Mood",
+        hint: "The emotional register of their narrative",
+        angle: "The emotional register suggests"
+      }
+    };
 
-  // Minors
-  for (const s of SUITS){
-    for (const r of RANKS){
-      const isCourt = !!r.court;
-      const rankName = r.key;
-      const pipNumber = r.n ?? null;
+    /* =========================================
+       SUIT METADATA
+       ========================================= */
+    const SUITS = {
+      wands: { name: "Wands", element: "Fire", glyph: "🜂" },
+      cups: { name: "Cups", element: "Water", glyph: "🜄" },
+      swords: { name: "Swords", element: "Air", glyph: "🜁" },
+      pentacles: { name: "Pentacles", element: "Earth", glyph: "🜃" }
+    };
 
-      const title = `${rankName} of ${s.key}`;
-      const id = `MI-${s.key}-${rankName}`;
+    const RANK_NAMES = {
+      1: "Ace", 2: "Two", 3: "Three", 4: "Four", 5: "Five",
+      6: "Six", 7: "Seven", 8: "Eight", 9: "Nine", 10: "Ten",
+      11: "Page", 12: "Knight", 13: "Queen", 14: "King"
+    };
 
-      let astrology = "";
-      if (!isCourt && pipNumber >= 2 && pipNumber <= 10){
-        astrology = decans[s.key][pipNumber];
-      } else if (!isCourt && pipNumber === 1){
-        astrology = `Root of ${s.element} (Ace)`;
-      } else if (isCourt){
-        const courtElem = courtElement(rankName, s.element);
-        astrology = `${courtElem} (court elemental blend)`;
-      } else {
-        astrology = `${s.element}`;
+    /* =========================================
+       BUILD FULL DECK
+       ========================================= */
+    function buildDeck() {
+      const cards = [];
+
+      // Add Majors
+      for (const m of MAJORS) {
+        cards.push({
+          id: `major-${m.num}`,
+          arcana: "Major",
+          name: m.name,
+          num: m.num,
+          suit: null,
+          glyph: m.glyph,
+          element: m.element,
+          astro: m.astro,
+          briefU: m.briefU,
+          briefR: m.briefR,
+          coreU: m.coreU,
+          coreR: m.coreR,
+          tones: m.tones
+        });
       }
 
-      const u = composeMeaningU(r, s);
-      const rev = composeMeaningR(r, s);
+      // Add Minors with card-specific data
+      for (const [suitKey, suitCards] of Object.entries(MINOR_CARDS)) {
+        const suit = SUITS[suitKey];
+        for (const [numStr, cardData] of Object.entries(suitCards)) {
+          const num = parseInt(numStr);
+          cards.push({
+            id: `minor-${suitKey}-${num}`,
+            arcana: "Minor",
+            name: `${RANK_NAMES[num]} of ${suit.name}`,
+            num: num,
+            suit: suitKey,
+            glyph: suit.glyph,
+            element: suit.element,
+            briefU: cardData.briefU,
+            briefR: cardData.briefR,
+            coreU: cardData.coreU,
+            coreR: cardData.coreR,
+            tones: cardData.tones,
+            court: num >= 11
+          });
+        }
+      }
 
-      cards.push({
-        id,
-        arcana: "Minor",
-        number: pipNumber,
-        name: title,
-        suit: s.key,
-        element: s.element,
-        astrology,
-        phase: r.phase,
-        keywordsU: u.keywords,
-        keywordsR: rev.keywords,
-        meaningU: u.text,
-        meaningR: rev.text,
-        glyph: s.glyph,
-      });
+      return cards;
     }
-  }
 
-  return cards;
-}
+    const ALL_CARDS = buildDeck();
+    const cardById = new Map(ALL_CARDS.map(c => [c.id, c]));
 
-/* =========
-   App State
-   ========= */
-const ALL_CARDS = buildDeck();
-const byId = new Map(ALL_CARDS.map(c => [c.id, c]));
+    /* =========================================
+       APP STATE
+       ========================================= */
+    let deckOrder = [];
+    let drawnCards = [];
 
-let deckOrder = [];
-let drawn = [];
-let learningMode = false;
+    function initDeck() {
+      deckOrder = shuffleArray(ALL_CARDS.map(c => c.id));
+      drawnCards = [];
+    }
 
-function remainingCounts(){
-  let major=0, minor=0;
-  for (const id of deckOrder){
-    const c = byId.get(id);
-    if (c.arcana === "Major") major++; else minor++;
-  }
-  return { total: deckOrder.length, major, minor };
-}
+    function getRemaining() {
+      const major = deckOrder.filter(id => cardById.get(id).arcana === "Major").length;
+      const minor = deckOrder.length - major;
+      return { total: deckOrder.length, major, minor };
+    }
 
-function drawFromFilter(filter){
-  if (deckOrder.length === 0) return null;
+    function drawCard(filter) {
+      if (deckOrder.length === 0) return null;
 
-  if (filter === "mixed"){
-    return deckOrder.shift();
-  }
+      let idx = 0;
+      if (filter === "major") {
+        idx = deckOrder.findIndex(id => cardById.get(id).arcana === "Major");
+      } else if (filter === "minor") {
+        idx = deckOrder.findIndex(id => cardById.get(id).arcana === "Minor");
+      }
 
-  const want = filter === "major" ? "Major" : "Minor";
-  const idx = deckOrder.findIndex(id => byId.get(id).arcana === want);
-  if (idx === -1) return null;
-  const [id] = deckOrder.splice(idx, 1);
-  return id;
-}
+      if (idx === -1) return null;
+      const [id] = deckOrder.splice(idx, 1);
+      const reversed = randomBool();
+      return { id, reversed, drawNum: drawnCards.length + 1 };
+    }
 
-/* =========
-   Rendering helpers
-   ========= */
-function majorGlyphFor(name){
-  const n = name.toLowerCase();
-  if (n.includes("fool")) return "☄";
-  if (n.includes("magician")) return "⟡";
-  if (n.includes("priestess")) return "☾";
-  if (n.includes("empress")) return "❀";
-  if (n.includes("emperor")) return "⌁";
-  if (n.includes("hierophant")) return "⛩";
-  if (n.includes("lovers")) return "♢";
-  if (n.includes("chariot")) return "➶";
-  if (n.includes("strength")) return "✹";
-  if (n.includes("hermit")) return "⟣";
-  if (n.includes("wheel")) return "⟲";
-  if (n.includes("justice")) return "⚖";
-  if (n.includes("hanged")) return "⟟";
-  if (n.includes("death")) return "✖";
-  if (n.includes("temperance")) return "☍";
-  if (n.includes("devil")) return "⛓";
-  if (n.includes("tower")) return "⚡";
-  if (n.includes("star")) return "✧";
-  if (n.includes("moon")) return "☽";
-  if (n.includes("sun")) return "☀";
-  if (n.includes("judgement")) return "⟠";
-  if (n.includes("world")) return "◌";
-  if (n.includes("well")) return "⟡";
-  if (n.includes("artist")) return "✎";
-  return "✦";
-}
+    /* =========================================
+       UI ELEMENTS
+       ========================================= */
+    const positionSelect = document.getElementById('positionSelect');
+    const genreSelect = document.getElementById('genreSelect');
+    const deckSelect = document.getElementById('deckSelect');
+    const meaningSelect = document.getElementById('meaningSelect');
+    const drawBtn = document.getElementById('drawBtn');
+    const reshuffleBtn = document.getElementById('reshuffleBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    const cardsGrid = document.getElementById('cardsGrid');
+    const emptyState = document.getElementById('emptyState');
+    const logOutput = document.getElementById('logOutput');
+    const hudRemaining = document.getElementById('hudRemaining');
+    const hudBreakdown = document.getElementById('hudBreakdown');
+    const statusText = document.getElementById('statusText');
+    const toast = document.getElementById('toast');
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, m => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-  }[m]));
-}
+    let toastTimeout = null;
+    function showToast(msg) {
+      clearTimeout(toastTimeout);
+      toast.textContent = msg;
+      toast.classList.add('show');
+      toastTimeout = setTimeout(() => toast.classList.remove('show'), 2000);
+    }
 
-/* =========
-   UI elements
-   ========= */
-const arcanaSel = document.getElementById("arcanaSel");
-const modeSel = document.getElementById("modeSel");
-const countWrap = document.getElementById("countWrap");
-const countSel = document.getElementById("countSel");
-const learnToggle = document.getElementById("learnToggle");
-const drawBtn = document.getElementById("drawBtn");
-const reshuffleBtn = document.getElementById("reshuffleBtn");
-const clearBtn = document.getElementById("clearBtn");
-const copyBtn = document.getElementById("copyBtn");
-const cardsGrid = document.getElementById("cardsGrid");
-const emptyState = document.getElementById("emptyState");
-const logOut = document.getElementById("logOut");
-const toastEl = document.getElementById("toast");
-const hudRemaining = document.getElementById("hudRemaining");
-const hudBreakdown = document.getElementById("hudBreakdown");
-const statusLine = document.getElementById("statusLine");
-const statusHint = document.getElementById("statusHint");
-const seedLine = document.getElementById("seedLine");
+    function updateHUD() {
+      const r = getRemaining();
+      hudRemaining.textContent = `Remaining: ${r.total}`;
+      hudBreakdown.textContent = `Major: ${r.major} / Minor: ${r.minor}`;
+    }
 
-let toastTimer = null;
-function toast(msg){
-  clearTimeout(toastTimer);
-  toastEl.textContent = msg;
-  toastEl.classList.add("show");
-  toastTimer = setTimeout(()=> toastEl.classList.remove("show"), 1300);
-}
-function setStatus(line, hint){
-  statusLine.textContent = line;
-  statusHint.textContent = hint;
-}
+    function updateLog() {
+      const lines = drawnCards.map(d => {
+        const card = cardById.get(d.id);
+        const orientation = d.reversed ? "Reversed" : "Upright";
+        const posName = POSITIONS[d.position]?.name || "General";
+        return `${d.drawNum}) ${card.name} — ${orientation} [${posName}]`;
+      });
+      logOutput.value = lines.join('\n');
+    }
 
-function renderCard(draw){
-  const c = byId.get(draw.id);
-  const isMajor = c.arcana === "Major";
-  const glyph = isMajor ? majorGlyphFor(c.name) : c.glyph;
+    function getMeaning(card, reversed, position, genre, depth) {
+      if (depth === 'hidden') return null;
 
-  const badgeText = isMajor ? "MAJOR" : `MINOR • ${c.suit.toUpperCase()}`;
-  const numText = isMajor
-    ? `#${c.number}`
-    : (c.number ? `${c.number}` : c.name.split(" ")[0].toUpperCase());
+      const pos = POSITIONS[position];
+      const brief = reversed ? card.briefR : card.briefU;
+      const core = reversed ? card.coreR : card.coreU;
+      const tonal = card.tones ? card.tones[genre] || null : null;
 
-  const orientation = draw.reversed ? "Reversed" : "Upright";
-  const meaning = draw.reversed ? c.meaningR : c.meaningU;
-  const kw = draw.reversed ? c.keywordsR : c.keywordsU;
+      if (depth === 'brief') {
+        return {
+          position: pos.name,
+          hint: pos.hint,
+          angle: null,
+          text: brief,
+          genre: null
+        };
+      }
 
-  const wrap = document.createElement("div");
-  wrap.className = "card" + (learningMode ? " learning" : "");
-  if (draw.reversed) wrap.classList.add("isReversed");
+      // Detailed
+      return {
+        position: pos.name,
+        hint: pos.hint,
+        angle: pos.angle,
+        text: core,
+        genre: genre !== 'neutral' && tonal ? tonal : null
+      };
+    }
 
-  const ribbon = draw.reversed ? `<div class="revRibbon">Reversed</div>` : "";
+    function renderCard(draw, isNew = false) {
+      const card = cardById.get(draw.id);
+      const position = draw.position || 'general';
+      const genre = draw.genre || 'neutral';
+      const depth = meaningSelect.value;
+      const meaning = getMeaning(card, draw.reversed, position, genre, depth);
 
-  wrap.innerHTML = `
-    ${ribbon}
-    <div class="cardFace" title="${escapeHtml(c.name)} (${orientation})">
-      <div class="cardTop">
-        <div class="badge"><span class="miniDot"></span><span>${badgeText}</span></div>
-        <div class="numSigil">${escapeHtml(numText)}</div>
-      </div>
+      const suitClass = card.suit ? `suit-${card.suit}` : 'suit-major';
+      const reversedClass = draw.reversed ? 'is-reversed' : '';
+      const arcanaLabel = card.arcana === 'Major' ? 'MAJOR' : `MINOR • ${card.suit?.toUpperCase() || ''}`;
+      const numLabel = card.arcana === 'Major' ? `#${card.num}` : RANK_NAMES[card.num] || card.num;
 
-      <div class="cardMid">
-        <div class="glyph">${escapeHtml(glyph)}</div>
-        <div class="name">${escapeHtml(c.name)}</div>
-        <div class="subtitle">${escapeHtml(orientation)} • Draw #${draw.drawnIndex}</div>
-      </div>
+      const wrapper = document.createElement('div');
+      wrapper.className = 'card-wrapper';
+      wrapper.dataset.drawNum = draw.drawNum;
 
-      <div class="cardBottom">
-        <div class="tag">${escapeHtml(c.arcana === "Major" ? c.astrology : c.element)}</div>
-        <div class="tag">${escapeHtml(c.phase)}</div>
-      </div>
-    </div>
+      // Start unflipped if new, flipped if re-rendering
+      const flippedClass = isNew ? '' : 'flipped';
 
-    <div class="info">
-      <div class="row">
-        <span class="k">Element: ${escapeHtml(c.element)}</span>
-        <span class="k">Astro: ${escapeHtml(c.astrology)}</span>
-        <span class="k">Phase: ${escapeHtml(c.phase)}</span>
-      </div>
-      <div class="meaning">
-        <div><b>${escapeHtml(orientation)}:</b> ${escapeHtml(meaning)}</div>
-        <div style="margin-top:8px; color: rgba(215,230,255,.82);"><b>Keywords:</b> ${escapeHtml(kw)}</div>
-      </div>
-    </div>
-  `;
-  return wrap;
-}
+      wrapper.innerHTML = `
+        <div class="card ${suitClass} ${reversedClass} ${flippedClass}">
+          <div class="card-face card-back">
+            <div class="card-back-inner">
+              <div class="card-back-symbol">☽</div>
+            </div>
+          </div>
+          <div class="card-face card-front">
+            <div class="card-header">
+              <span class="card-arcana">${arcanaLabel}</span>
+              <span class="card-number">${numLabel}</span>
+            </div>
+            <div class="card-center">
+              <div class="card-glyph">${card.glyph}</div>
+              <div class="card-name">${card.name}</div>
+              <div class="card-orientation ${draw.reversed ? 'reversed' : ''}">${draw.reversed ? '↺ Reversed' : '↑ Upright'}</div>
+            </div>
+            <div class="card-footer">
+              <span>${card.element}</span>
+              <span>Draw #${draw.drawNum}</span>
+            </div>
+          </div>
+        </div>
+        ${meaning ? `
+          <div class="card-meaning ${isNew ? '' : 'visible'}">
+            ${meaning.hint ? `<div class="meaning-position">${meaning.position}</div>` : ''}
+            ${meaning.angle ? `<div class="meaning-angle">${meaning.angle}</div>` : ''}
+            <div class="meaning-text">${meaning.text}</div>
+            ${meaning.genre ? `<div class="meaning-genre">${genreSelect.options[genreSelect.selectedIndex].text}: ${meaning.genre}</div>` : ''}
+          </div>
+        ` : ''}
+      `;
 
-function updateLog(){
-  const lines = drawn.map(d => {
-    const c = byId.get(d.id);
-    return `${d.drawnIndex}) ${c.name} — ${d.reversed ? "Reversed" : "Upright"}`;
-  });
-  logOut.value = lines.join("\n");
-}
+      // If new card, trigger flip animation
+      if (isNew) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const cardEl = wrapper.querySelector('.card');
+            const meaningEl = wrapper.querySelector('.card-meaning');
+            if (cardEl) cardEl.classList.add('flipped');
+            if (meaningEl) {
+              setTimeout(() => meaningEl.classList.add('visible'), 400);
+            }
+          });
+        });
+      }
 
-function updateHUD(){
-  const { total, major, minor } = remainingCounts();
-  hudRemaining.textContent = `Remaining: ${total}`;
-  hudBreakdown.textContent = `Major ${major} / Minor ${minor}`;
-  if (total === 0) setStatus("Deck empty.", "Reshuffle to refill the pool.");
-}
+      return wrapper;
+    }
 
-function updateCards(){
-  cardsGrid.innerHTML = "";
-  if (drawn.length === 0){
-    emptyState.style.display = "block";
-    return;
-  }
-  emptyState.style.display = "none";
+    function updateCards() {
+      cardsGrid.innerHTML = '';
+      if (drawnCards.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
 
-  const frag = document.createDocumentFragment();
-  for (const d of drawn){
-    frag.appendChild(renderCard(d));
-  }
-  cardsGrid.appendChild(frag);
-}
+      for (const draw of drawnCards) {
+        cardsGrid.appendChild(renderCard(draw, false));
+      }
+    }
 
-function updateUI(){
-  updateHUD();
-  updateCards();
-  updateLog();
-}
+    function updateUI() {
+      updateHUD();
+      updateCards();
+      updateLog();
+    }
 
-function reshuffle(){
-  deckOrder = ALL_CARDS.map(c => c.id);
-  shuffleInPlace(deckOrder);
-  drawn = [];
-  updateUI();
-  setStatus("Reshuffled.", "All cards returned to the pool. The storm is reset.");
-  toast("Reshuffled.");
-}
+    /* =========================================
+       EVENT HANDLERS
+       ========================================= */
+    drawBtn.addEventListener('click', () => {
+      const filter = deckSelect.value;
+      const draw = drawCard(filter);
 
-function clearTable(){
-  drawn = [];
-  updateUI();
-  setStatus("Table cleared.", "Deck state unchanged (no reshuffle).");
-  toast("Cleared.");
-}
+      if (!draw) {
+        showToast('No cards left in that pool');
+        statusText.textContent = 'Deck empty—reshuffle to continue';
+        return;
+      }
 
-function doDraw(){
-  const filter = arcanaSel.value;
-  const mode = modeSel.value;
-  const n = mode === "multi" ? Math.max(1, Math.floor(Number(countSel.value) || 1)) : 1;
+      // Store context with the draw
+      draw.position = positionSelect.value;
+      draw.genre = genreSelect.value;
 
-  let pulled = 0;
-  for (let i=0; i<n; i++){
-    const id = drawFromFilter(filter);
-    if (!id) break;
-    const reversed = randomBool();
-    drawn.push({ id, reversed, drawnIndex: drawn.length + 1 });
-    pulled++;
-  }
+      drawnCards.push(draw);
+      updateHUD();
+      updateLog();
 
-  if (pulled === 0){
-    setStatus("No cards left in that pool.", "Try another arcana pool, or reshuffle.");
-    toast("Nothing left to draw.");
+      // Hide empty state
+      emptyState.style.display = 'none';
+
+      // Add new card with animation
+      const cardWrapper = renderCard(draw, true);
+      cardsGrid.appendChild(cardWrapper);
+
+      showToast(`Drew ${cardById.get(draw.id).name}`);
+      statusText.textContent = `Last draw: ${cardById.get(draw.id).name}`;
+    });
+
+    reshuffleBtn.addEventListener('click', () => {
+      initDeck();
+      updateUI();
+      showToast('Deck reshuffled');
+      statusText.textContent = 'Deck reshuffled—all cards returned';
+    });
+
+    clearBtn.addEventListener('click', () => {
+      drawnCards = [];
+      updateUI();
+      showToast('Table cleared');
+      statusText.textContent = 'Table cleared—deck unchanged';
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      const text = logOutput.value.trim();
+      if (!text) {
+        showToast('Nothing to copy');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Copied to clipboard');
+      } catch {
+        logOutput.select();
+        document.execCommand('copy');
+        showToast('Copied');
+      }
+    });
+
+    // Re-render cards when meaning depth changes
+    meaningSelect.addEventListener('change', updateCards);
+
+    /* =========================================
+       INIT
+       ========================================= */
+    initDeck();
     updateUI();
-    return;
-  }
-
-  const msg = (mode === "single") ? "Pulled 1 card." : `Pulled ${pulled} card${pulled===1?"":"s"}.`;
-  setStatus(msg, "Cards are removed from the pool until reshuffle.");
-  toast(msg);
-  updateUI();
-}
-
-/* =========
-   Controls
-   ========= */
-modeSel.addEventListener("change", () => {
-  countWrap.style.display = (modeSel.value === "multi") ? "block" : "none";
-});
-countSel.addEventListener("input", () => {
-  const v = Math.max(1, Math.min(80, Math.floor(Number(countSel.value) || 1)));
-  countSel.value = v;
-});
-
-function setLearning(on){
-  learningMode = !!on;
-  learnToggle.classList.toggle("on", learningMode);
-  learnToggle.setAttribute("aria-pressed", String(learningMode));
-  updateCards();
-  toast(learningMode ? "Learning mode: ON" : "Learning mode: OFF");
-}
-learnToggle.addEventListener("click", () => setLearning(!learningMode));
-learnToggle.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" || e.key === " "){
-    e.preventDefault();
-    setLearning(!learningMode);
-  }
-});
-
-drawBtn.addEventListener("click", doDraw);
-reshuffleBtn.addEventListener("click", reshuffle);
-clearBtn.addEventListener("click", clearTable);
-
-copyBtn.addEventListener("click", async () => {
-  const text = logOut.value.trim();
-  if (!text){
-    toast("Nothing to copy.");
-    return;
-  }
-  try{
-    await navigator.clipboard.writeText(text);
-    toast("Copied.");
-  }catch{
-    logOut.focus();
-    logOut.select();
-    document.execCommand("copy");
-    toast("Copied (fallback).");
-  }
-});
-
-/* =========
-   Boot
-   ========= */
-(function init(){
-  deckOrder = ALL_CARDS.map(c => c.id);
-  shuffleInPlace(deckOrder);
-
-  seedLine.textContent = HAS_CRYPTO ? "RNG: Web Crypto" : "RNG: Math.random (fallback)";
-  if (!HAS_CRYPTO){
-    setStatus("Warning: crypto RNG unavailable.", "Your browser doesn’t support crypto.getRandomValues. Using Math.random fallback.");
-    toast("Crypto RNG unavailable.");
-  } else {
-    setStatus("Ready.", "Draw a card. Or reshuffle to re-randomize the deck order.");
-  }
-
-  updateUI();
-  if (drawn.length === 0) emptyState.style.display = "block";
-})();
-</script>
+  </script>
 </body>
 </html>
